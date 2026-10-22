@@ -1,0 +1,35 @@
+# Секреты и локальные настройки
+.env
+.env.local
+*.pem
+*.key
+
+# Backend (Java / Maven)
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+hs_err_pid*
+
+# Frontend (Node / Vite)
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Данные приложения и тома Docker
+uploads/
+data/
+pgdata/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.vs/
+
+# Система и логи
+.DS_Store
+Thumbs.db
+*.log
+logs/
