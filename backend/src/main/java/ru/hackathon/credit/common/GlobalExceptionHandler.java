@@ -73,6 +73,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleOther(Exception e) {
+        // Стандартные исключения Spring MVC (неверный метод, нет части multipart и т. п.) знают свой статус
+        if (e instanceof org.springframework.web.ErrorResponse er && er.getStatusCode().value() < 500) {
+            HttpStatus status = HttpStatus.valueOf(er.getStatusCode().value());
+            return build(status, "REQUEST_ERROR", titleFor(status), er.getBody().getDetail(), null);
+        }
         log.error("Необработанная ошибка", e);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Внутренняя ошибка",
                 "Что-то пошло не так. Повторите попытку позже", null);

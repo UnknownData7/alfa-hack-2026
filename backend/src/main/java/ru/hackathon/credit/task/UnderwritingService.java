@@ -306,8 +306,10 @@ public class UnderwritingService {
             case APPROVE -> {
                 ScoringRun run = latestRun(app);
                 Map<String, Object> inputs = scoring.inputs(run);
-                double amount = ((Number) inputs.get("requestedAmount")).doubleValue();
-                int term = ((Number) inputs.get("termMonths")).intValue();
+                // Сумма и срок берутся из последнего запуска скоринга: андеррайтер мог изменить их при пересчёте
+                double amount = inputs.get("requestedAmount") instanceof Number n
+                        ? n.doubleValue() : app.getRequestedAmount().doubleValue();
+                int term = inputs.get("termMonths") instanceof Number n2 ? n2.intValue() : app.getRequestedTermMonths();
                 List<String> reasons = new ArrayList<>();
                 reasons.add("Оценка риска: грейд " + run.getGrade());
                 if (comment != null && !comment.isBlank()) {

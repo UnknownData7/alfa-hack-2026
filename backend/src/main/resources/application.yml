@@ -63,8 +63,6 @@ management:
       show-details: never
 
 springdoc:
-  swagger-ui:
-    path: /swagger-ui/index.html
   api-docs:
     path: /v3/api-docs
 

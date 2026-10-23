@@ -145,7 +145,9 @@ export function WizardPage() {
           const created = await api.createDraft(toRequest(form, fromId));
           setDraftId(created.id);
           setDraft(created);
-          navigate(`/applications/${created.id}/edit`, { replace: true });
+          loaded.current = true;
+          // Меняем адрес без перехода: новый маршрут пересоздал бы мастер и сбросил шаг
+          window.history.replaceState(window.history.state, '', `/applications/${created.id}/edit`);
         } catch (e) {
           setError(e);
           return;

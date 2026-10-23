@@ -125,7 +125,9 @@ class ScenarioIntegrationTest extends IntegrationTestBase {
         assertTrue(repeatCard.get("documents").toString().contains("\"newForBank\":true"));
         JsonNode recalc = postJson(uw1, "/api/bank/tasks/" + repeatId + "/recalculate",
                 Map.of("confirmedAnnualTurnover", 4_800_000), 200);
-        assertEquals(2, recalc.get("run").get("runNo").asInt());
+        // Запуски: первичный, повторный после ответа клиента и пересчёт андеррайтера
+        assertEquals(3, recalc.get("run").get("runNo").asInt());
+        assertEquals("RECALC", recalc.get("run").get("trigger").asText());
         for (JsonNode check : repeatCard.get("checks")) {
             putJson(uw1, "/api/bank/tasks/" + repeatId + "/checks/" + check.get("code").asText(),
                     Map.of("status", "OK", "comment", "Подтверждено выпиской"), 200);

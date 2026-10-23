@@ -62,7 +62,9 @@ export function setUnauthorizedHandler(handler: () => void) {
 async function request<T>(method: string, url: string, body?: unknown, isForm = false): Promise<T> {
   const headers: Record<string, string> = {};
   const token = getToken();
-  if (token) {
+  // Вход и сброс демо-данных не требуют токена; просроченный токен сервер отклонил бы даже здесь
+  const isPublic = url.endsWith('/auth/login') || url.startsWith('/api/dev/');
+  if (token && !isPublic) {
     headers.Authorization = `Bearer ${token}`;
   }
   if (body !== undefined && !isForm) {

@@ -42,7 +42,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/ping").permitAll()
-                        .requestMatchers("/api/dev/**").permitAll()
+                        .requestMatchers("/api/dev/**", "/error").permitAll()
                         .requestMatchers("/api/bank/**").hasRole(Role.UNDERWRITER.name())
                         .requestMatchers("/api/client/**", "/api/applications/**", "/api/feed/**",
                                 "/api/products/recommend").hasRole(Role.CLIENT.name())
