@@ -56,7 +56,8 @@ Log "Стенд поднят: http://localhost:$port"
 # Смоук-тест S1 через API
 $base = "http://localhost:$port"
 function Api($method, $path, $body, $token) {
-    $headers = @{}
+    # Origin как у браузера: так проверка ловит и ошибки CORS за nginx
+    $headers = @{ Origin = $base }
     if ($token) { $headers['Authorization'] = "Bearer $token" }
     $params = @{ Method = $method; Uri = "$base$path"; Headers = $headers; TimeoutSec = 30 }
     if ($null -ne $body) {
@@ -71,7 +72,7 @@ try {
     $draft = Api 'POST' '/api/applications' @{ productCode = 'WORKING_EXPRESS'; purpose = 'WORKING_CAPITAL'; amount = 1200000; termMonths = 9; consentDataProcessing = $true; consentCreditBureau = $true } $token
     $id = $draft.id
     $pdf = Join-Path $root 'postman\files\statement.pdf'
-    curl.exe -s -o NUL -w "upload=%{http_code}`n" -H "Authorization: Bearer $token" -F "docType=BANK_STATEMENT" -F "file=@$pdf;type=application/pdf" "$base/api/applications/$id/documents" | Out-File $summary -Append -Encoding utf8
+    curl.exe -s -o NUL -w "upload=%{http_code}`n" -H "Origin: $base" -H "Authorization: Bearer $token" -F "docType=BANK_STATEMENT" -F "file=@$pdf;type=application/pdf" "$base/api/applications/$id/documents" | Out-File $summary -Append -Encoding utf8
     Api 'POST' "/api/applications/$id/submit" $null $token | Out-Null
     $app = $null
     for ($i = 0; $i -lt 30; $i++) {
