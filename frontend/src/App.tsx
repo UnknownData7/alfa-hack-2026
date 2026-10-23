@@ -1,28 +1,43 @@
-import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import type { Role } from './api/types';
+import { useAuth } from './auth/AuthContext';
+import { Layout } from './components/Layout';
+import { Loader } from './components/ui';
+import { LoginPage } from './pages/LoginPage';
+import { QueuePage } from './pages/bank/QueuePage';
+import { TaskPage } from './pages/bank/TaskPage';
+import { ApplicationPage } from './pages/client/ApplicationPage';
+import { HomePage } from './pages/client/HomePage';
+import { NeedPage } from './pages/client/NeedPage';
+import { WizardPage } from './pages/client/WizardPage';
 
-type BackendState = 'loading' | 'up' | 'down';
+function Protected({ role, children }: { role: Role; children: ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <Loader />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== role) return <Navigate to={user.role === 'UNDERWRITER' ? '/bank' : '/'} replace />;
+  return <Layout>{children}</Layout>;
+}
 
 export default function App() {
-  const [backend, setBackend] = useState<BackendState>('loading');
-
-  useEffect(() => {
-    fetch('/actuator/health')
-      .then((r) => r.json())
-      .then((body) => setBackend(body.status === 'UP' ? 'up' : 'down'))
-      .catch(() => setBackend('down'));
-  }, []);
-
-  const label = {
-    loading: 'проверяем…',
-    up: 'работает',
-    down: 'недоступен',
-  }[backend];
-
+  const { user, loading } = useAuth();
   return (
-    <main className="stub">
-      <h1>Кредитный кабинет предпринимателя</h1>
-      <p>Каркас приложения. Интерфейс появится на следующих этапах.</p>
-      <p className={`badge badge-${backend}`}>Сервер: {label}</p>
-    </main>
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          loading ? <Loader /> : user ? <Navigate to={user.role === 'UNDERWRITER' ? '/bank' : '/'} replace /> : <Layout><LoginPage /></Layout>
+        }
+      />
+      <Route path="/" element={<Protected role="CLIENT"><HomePage /></Protected>} />
+      <Route path="/need" element={<Protected role="CLIENT"><NeedPage /></Protected>} />
+      <Route path="/applications/new" element={<Protected role="CLIENT"><WizardPage /></Protected>} />
+      <Route path="/applications/:id/edit" element={<Protected role="CLIENT"><WizardPage /></Protected>} />
+      <Route path="/applications/:id" element={<Protected role="CLIENT"><ApplicationPage /></Protected>} />
+      <Route path="/bank" element={<Protected role="UNDERWRITER"><QueuePage /></Protected>} />
+      <Route path="/bank/tasks/:id" element={<Protected role="UNDERWRITER"><TaskPage /></Protected>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
