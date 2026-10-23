@@ -15,6 +15,7 @@ hs_err_pid*
 node_modules/
 dist/
 .vite/
+*.tsbuildinfo
 coverage/
 
 # Данные приложения и тома Docker

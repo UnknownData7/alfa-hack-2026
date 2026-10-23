@@ -27,4 +27,24 @@
 
 ## Записи
 
-(заполняется по ходу работы)
+## Этап 0. Каркас — 2026-10-23
+
+Сделано:
+- `docker-compose.yml`: сервисы `db` (PostgreSQL 16), `backend` (Spring Boot), `frontend` (nginx со статикой React); у каждого healthcheck, `restart: unless-stopped`, лимиты памяти (суммарно до 1,4 ГБ); тома для данных БД и файлов документов.
+- `backend/`: Spring Boot 3.5.6 на Java 21, модули Web и Actuator, `/actuator/health` с пробами readiness и liveness, `GET /api/ping`, тест на оба эндпоинта; многоэтапный Dockerfile, запуск от непривилегированного пользователя, `-Xmx512m`.
+- `frontend/`: React 18 + TypeScript + Vite 6, страница-заглушка показывает состояние backend; nginx проксирует `/api`, health, Swagger; `package-lock.json`.
+- `.env.example` со всеми параметрами из брифа, заготовки `README.md` и `THIRD_PARTY_NOTICES.md`.
+
+Как проверить:
+1. `cp .env.example .env && docker compose up --build`
+2. `docker compose ps`: все три сервиса `healthy`.
+3. http://localhost:3000 открывает заглушку с надписью «Сервер: работает».
+4. http://localhost:3000/actuator/health и http://localhost:8081/actuator/health отвечают `{"status":"UP"}`.
+5. `git ls-files | grep .env` показывает только `.env.example`.
+
+Отклонения от плана:
+- Этап собран в облачной среде, где закрыты Maven Central и Docker Hub. Фронтенд собран (`npm run build`), `docker compose config` валиден. Сборка backend, тесты и `docker compose up --build` в этой среде не выполнялись и требуют проверки на локальной машине.
+- Maven Wrapper не добавлен по той же причине (нет доступа к его дистрибутиву). Docker-сборка его не требует: используется образ Maven. Добавить одной командой на машине с доступом к Maven Central: `cd backend && mvn -N wrapper:wrapper -Dmaven=3.9.11`, затем закоммитить `mvnw`, `mvnw.cmd`, `.mvn/`.
+- Подключение к БД появится на этапе 1 вместе с JPA и Flyway; на этапе 0 backend от базы не зависит, но стартует после её готовности.
+
+Коммит / тег: ветка `stage-0-skeleton`
