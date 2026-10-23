@@ -1,6 +1,6 @@
 # Описание API
 
-> Статус: проектное описание. Источник истины — `openapi.yaml`, который экспортируется из работающего приложения (команда экспорта — в README). После реализации сверить пути и поля.
+> Статус: сверено с контроллерами. Полная спецификация — [`openapi.yaml`](openapi.yaml); при запущенном приложении её можно выгрузить заново командой из README.
 
 Базовый путь: `/api`. Формат: JSON, кодировка UTF-8. Интерактивная документация доступна в Swagger UI (адрес — в README).
 
@@ -32,6 +32,10 @@
 | 409 | недопустимый переход статуса или конфликт версий |
 | 422 | нарушено бизнес-правило (например, не заполнены проверки) |
 
+Частые коды в поле `code`: `VALIDATION_ERROR`, `BAD_CREDENTIALS`, `INVALID_STATUS_TRANSITION`, `INVALID_STATUS`, `CONSENTS_REQUIRED`, `AMOUNT_OUT_OF_RANGE`, `TERM_OUT_OF_RANGE`, `CHECKS_INCOMPLETE`, `NEGATIVE_CHECK`, `CHECK_NEEDS_INFO`, `DECLINE_REASON_REQUIRED`, `WRONG_CODE`, `SIGNING_BLOCKED`, `TASK_ALREADY_IN_PROGRESS`, `QUEUE_EMPTY`, `CONCURRENT_MODIFICATION`.
+
+Чужая заявка возвращает `404`, а не `403`, чтобы не раскрывать факт её существования.
+
 ## Эндпоинты
 
 ### Общие
@@ -41,6 +45,7 @@
 | `POST /api/auth/login` | вход, возвращает токен и профиль |
 | `GET /api/auth/me` | текущий пользователь и роль |
 | `GET /api/products` | каталог продуктов |
+| `GET /api/products/purposes` | справочник целей финансирования |
 
 ### Клиент (`CLIENT`)
 
@@ -67,13 +72,14 @@
 
 | Метод и путь | Назначение |
 |---|---|
-| `GET /api/bank/tasks` | очередь задач, фильтры по статусу и «мои» |
+| `GET /api/bank/tasks?filter=` | очередь задач; `active` (по умолчанию), `mine`, `new`, `postponed`, `done` |
 | `POST /api/bank/tasks/take-next` | взять следующую задачу по правилам очереди |
 | `POST /api/bank/tasks/{id}/take` | взять конкретную задачу |
 | `GET /api/bank/tasks/{id}` | карточка: данные, документы, скоринг с разбором, проверки, история |
 | `PUT /api/bank/tasks/{id}/checks/{code}` | результат проверки |
 | `POST /api/bank/tasks/{id}/recalculate` | пересчёт скоринга с изменёнными оборотом, суммой или сроком |
-| `POST /api/bank/tasks/{id}/decision` | решение: одобрить, одобрить с изменениями, запросить данные, отказать, отложить |
+| `POST /api/bank/tasks/{id}/decision` | решение: `APPROVE`, `APPROVE_WITH_CHANGES`, `REQUEST_INFO`, `DECLINE`, `POSTPONE` |
+| `GET /api/bank/applications/{id}/documents/{docId}` | скачать документ заявки |
 
 ### Служебные
 
@@ -115,6 +121,24 @@ Authorization: Bearer <token>
 }
 ```
 
+Запрос данных у клиента:
+
+```http
+POST /api/bank/tasks/42/decision
+Authorization: Bearer <token>
+
+{ "result": "REQUEST_INFO", "requestText": "Приложите выписку по счёту за 12 месяцев" }
+```
+
+Подтверждение кода подписания (неверный код возвращает `422` с числом оставшихся попыток):
+
+```http
+POST /api/applications/17/signing/confirm
+Authorization: Bearer <token>
+
+{ "code": "482913" }
+```
+
 ## Коллекция запросов
 
-В каталоге `postman/` лежит коллекция и environment. Токен подставляется скриптом после запроса входа. Прогон из командной строки: `newman run postman/collection.json -e postman/environment.json` (точная команда — в README).
+В каталоге `postman/` лежит коллекция и environment. Коллекция сначала сбрасывает демо-данные, токены и идентификаторы подставляются скриптами. Покрыты вход и роли, S1 целиком, S2, S5 и путь андеррайтера в S4. Прогон из корня репозитория: `npx newman run postman/collection.json -e postman/environment.json --working-dir .`

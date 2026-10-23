@@ -1,52 +1,80 @@
 # Сторонние компоненты
 
-Перечень сторонних компонентов, моделей, данных и сервисов, используемых в решении. Файл дополняется при добавлении каждой новой зависимости.
+Перечень сторонних компонентов, моделей, данных и сервисов, используемых в решении. Все компоненты бесплатные и распространяются под открытыми лицензиями.
 
 ## Backend
 
+Версии транзитивных зависимостей управляются `spring-boot-starter-parent` 3.5.6.
+
+| Компонент | Версия | Лицензия | Назначение |
+|---|---|---|---|
+| Spring Boot (web, validation, security, data-jpa, actuator, oauth2-resource-server) | 3.5.6 | Apache License 2.0 | каркас приложения, REST, безопасность, доступ к данным |
+| Spring Security OAuth2 JOSE (Nimbus JOSE + JWT) | по BOM Spring Boot 3.5.6 | Apache License 2.0 | выпуск и проверка JWT |
+| Hibernate ORM | по BOM Spring Boot 3.5.6 | Apache License 2.0 | JPA |
+| Flyway (core, database-postgresql) | по BOM Spring Boot 3.5.6 | Apache License 2.0 | миграции схемы |
+| PostgreSQL JDBC Driver | по BOM Spring Boot 3.5.6 | BSD 2-Clause | драйвер БД |
+| springdoc-openapi-starter-webmvc-ui | 2.8.9 | Apache License 2.0 | OpenAPI и Swagger UI |
+| Jackson | по BOM Spring Boot 3.5.6 | Apache License 2.0 | JSON |
+
+Тестовые зависимости:
+
 | Компонент | Версия | Лицензия |
 |---|---|---|
-| Spring Boot (starter-web, starter-actuator, starter-test) | 3.5.6 | Apache License 2.0 |
-
-Транзитивные зависимости управляются через `spring-boot-starter-parent` 3.5.6.
+| spring-boot-starter-test (JUnit 5, Mockito, AssertJ) | 3.5.6 | Apache License 2.0, EPL 2.0, MIT |
+| spring-security-test | по BOM Spring Boot 3.5.6 | Apache License 2.0 |
+| spring-boot-testcontainers, Testcontainers (junit-jupiter, postgresql) | по BOM Spring Boot 3.5.6 | Apache License 2.0, MIT |
 
 ## Frontend
+
+Точные версии всех пакетов, включая транзитивные, зафиксированы в `frontend/package-lock.json`.
 
 | Компонент | Версия | Лицензия |
 |---|---|---|
 | React, React DOM | 18.3.1 | MIT |
+| React Router DOM | 6.30.6 | MIT |
+| TanStack Query (React) | 5.104.5 | MIT |
 | Vite | 6.4.5 | MIT |
 | @vitejs/plugin-react | 4.7.0 | MIT |
 | TypeScript | 5.8.3 | Apache License 2.0 |
 | Vitest | 3.2.7 | MIT |
+| Testing Library (react, dom, jest-dom) | 16.3.3, 10.4.2, 6.9.1 | MIT |
+| jsdom | 26.1.0 | MIT |
 | @types/react, @types/react-dom | 18.3.31, 18.3.7 | MIT |
 
-Точные версии всех пакетов, включая транзитивные, зафиксированы в `frontend/package-lock.json`.
+Шрифты системные, внешние шрифты, иконки и CDN не используются.
 
 ## Образы Docker
 
 | Образ | Тег | Лицензия |
 |---|---|---|
 | postgres | 16.10-alpine | PostgreSQL License |
-| eclipse-temurin | 21.0.8_9-jre-alpine | GPL v2 with Classpath Exception |
+| eclipse-temurin (запуск backend) | 21.0.8_9-jre-alpine | GPL v2 with Classpath Exception |
 | maven (этап сборки) | 3.9.11-eclipse-temurin-21 | Apache License 2.0 |
 | node (этап сборки) | 22.20.0-alpine | MIT |
 | nginx | 1.28.0-alpine | BSD 2-Clause |
 
+## Инструменты проверки (не входят в поставку)
+
+| Инструмент | Лицензия | Назначение |
+|---|---|---|
+| Newman (Postman CLI) | Apache License 2.0 | прогон коллекции `postman/collection.json` |
+
 ## Смоделированные интеграции
 
-Реальные внешние системы не вызываются. Вместо них используются локальные моки (описание в `docs/ASSUMPTIONS.md`):
+Реальные внешние системы не вызываются. Вместо них используются локальные моки за интерфейсами (подробнее в `docs/ASSUMPTIONS.md`):
 
-- реестр юридических лиц и индивидуальных предпринимателей (аналог ЕГРЮЛ/ЕГРИП);
-- бюро кредитных историй;
-- сведения ФНС о налоговой задолженности;
-- подписание документов и доставка кода подтверждения;
-- выдача денежных средств.
+| Интеграция | Интерфейс | Мок |
+|---|---|---|
+| Реестр юрлиц и ИП (аналог ЕГРЮЛ/ЕГРИП) | `CompanyRegistryClient` | `MockCompanyRegistryClient` |
+| Бюро кредитных историй | `CreditBureauClient` | `MockCreditBureauClient` |
+| Сведения ФНС о налоговой задолженности | `TaxServiceClient` | `MockTaxServiceClient` |
+| Подписание и доставка кода подтверждения | `SigningProvider` | `MockSigningProvider` (код показывается в интерфейсе) |
+| Выдача денежных средств | `DisbursementProvider` | `MockDisbursementProvider` (только запись о симуляции) |
 
 ## Данные
 
-Все данные синтетические и созданы командой. Внешние датасеты не используются.
+Все данные синтетические и созданы командой: компании, люди, ИНН, обороты, кредитные истории, новости. Внешние датасеты не используются.
 
 ## Модели ИИ
 
-Не используются.
+Не используются. Скоринг построен на прозрачных правилах.
