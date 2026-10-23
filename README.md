@@ -137,6 +137,7 @@ curl -X POST http://localhost:3000/api/dev/reset-demo
 | `MOCK_UNAVAILABLE_SOURCES` | имитация сбоя источников: `REGISTRY`, `BUREAU`, `TAX` через запятую | пусто |
 | `TASK_SLA_HOURS` | срок обработки задачи андеррайтером | `4` |
 | `DEMO_SHOW_SIGNING_CODE` | показывать код подписания в интерфейсе | `true` |
+| `CORS_ALLOWED_ORIGINS` | адреса интерфейса, которым разрешены запросы к API | `http://localhost:3000,…` |
 | `JAVA_OPTS` | параметры памяти JVM | `-Xms128m -Xmx512m` |
 
 ## Тесты
