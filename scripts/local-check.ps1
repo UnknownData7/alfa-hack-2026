@@ -69,6 +69,9 @@ function Api($method, $path, $body, $token) {
 try {
     Api 'POST' '/api/dev/reset-demo' $null $null | Out-Null
     $token = (Api 'POST' '/api/auth/login' @{ login = 'romashka'; password = 'Demo#2026' } $null).token
+    $uwToken = (Api 'POST' '/api/auth/login' @{ login = 'uw1'; password = 'Demo#2026' } $null).token
+    $queue = Api 'GET' '/api/bank/tasks' $null $uwToken
+    Log "Банк: вход uw1 выполнен, задач в очереди: $($queue.Count)"
     $draft = Api 'POST' '/api/applications' @{ productCode = 'WORKING_EXPRESS'; purpose = 'WORKING_CAPITAL'; amount = 1200000; termMonths = 9; consentDataProcessing = $true; consentCreditBureau = $true } $token
     $id = $draft.id
     $pdf = Join-Path $root 'postman\files\statement.pdf'

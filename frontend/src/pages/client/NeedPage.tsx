@@ -48,7 +48,7 @@ export function NeedPage() {
           </label>
           <label className="field">
             <span>Сумма, ₽</span>
-            <input type="number" min={1} step={10000} value={amount} onChange={(e) => setAmount(e.target.value)} required />
+            <input type="number" min={1} step={1} value={amount} onChange={(e) => setAmount(e.target.value)} required />
           </label>
           <label className="field">
             <span>Срок, месяцев</span>

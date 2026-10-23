@@ -55,7 +55,7 @@ public class AuthController {
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS",
                         "Неверный логин или пароль"));
         JwtService.IssuedToken token = jwtService.issue(user);
-        audit.log(null, user.getRole().name(), user.getId(), "LOGIN", null);
+        audit.log(null, user.getRole() == Role.UNDERWRITER ? "BANK" : "CLIENT", user.getId(), "LOGIN", null);
         return new LoginResponse(token.token(), token.expiresAt(), toDto(user));
     }
 
