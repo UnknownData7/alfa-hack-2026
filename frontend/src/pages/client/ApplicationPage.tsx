@@ -5,7 +5,7 @@ import { api, downloadFile } from '../../api/client';
 import { docTypeLabel, formatDateTime, formatMoney, formatMonths, formatPct, formatSize } from '../../api/format';
 import type { ApplicationDetail, InfoRequest } from '../../api/types';
 import { StatusTracker } from '../../components/StatusTracker';
-import { ErrorBox, FactorTable, KeyValue, Loader, StatusBadge, Term } from '../../components/ui';
+import { ErrorBox, KeyValue, Loader, Money, StatusBadge, Term } from '../../components/ui';
 
 const ACTIVE_STATUSES = new Set(['SUBMITTED', 'SCORING', 'MANUAL_REVIEW', 'NEED_INFO', 'OFFER_MADE', 'SIGNING']);
 
@@ -39,7 +39,7 @@ export function ApplicationPage() {
         <div className="app-head">
           <div>
             <div className="muted small">
-              Заявка {a.number} · {a.productName}
+              {a.productName}, заявка {a.number}
             </div>
             <h1>
               {formatMoney(a.requestedAmount)} на {formatMonths(a.requestedTermMonths)}
@@ -78,22 +78,19 @@ export function ApplicationPage() {
 
       {a.status === 'ISSUED' && a.disbursement && (
         <div className="card success">
-          <h2>Кредит выдан</h2>
+          <h2>Деньги на счёте</h2>
+          <p className="issued-amount">
+            <Money value={a.disbursement.amount} />
+          </p>
           <KeyValue
             items={[
-              ['Сумма', formatMoney(a.disbursement.amount)],
               ['Зачислено на счёт', a.disbursement.accountMasked],
-              ['Дата', formatDateTime(a.disbursement.executedAt)],
+              ['Дата и время', formatDateTime(a.disbursement.executedAt)],
             ]}
           />
-          <p className="muted small">
-            Выдача смоделирована: денежных операций не было. В промышленной версии здесь будет проводка в банковской
-            системе.
-          </p>
+          <p className="muted small">В прототипе зачисление смоделировано, реальных денежных операций нет.</p>
         </div>
       )}
-
-      {a.decision && <DecisionBlock application={a} />}
 
       <div className="grid-2">
         <div className="card">
@@ -108,10 +105,7 @@ export function ApplicationPage() {
                     <strong>{h.toStatusLabel}</strong>
                     <span className="muted small">{formatDateTime(h.createdAt)}</span>
                   </div>
-                  <div className="small">
-                    {h.actorLabel}
-                    {h.comment ? `: ${h.comment}` : ''}
-                  </div>
+                  <div className="small">{h.comment}</div>
                 </li>
               ))}
           </ul>
@@ -130,8 +124,7 @@ export function ApplicationPage() {
                   {d.fileName}
                 </button>
                 <span className="muted small">
-                  {' '}
-                  · {docTypeLabel[d.docType] ?? d.docType} · {formatSize(d.sizeBytes)}
+                  {docTypeLabel[d.docType] ?? d.docType}, {formatSize(d.sizeBytes)}
                 </span>
               </li>
             ))}
@@ -306,19 +299,7 @@ export function OfferBlock({ application, onDone }: { application: ApplicationDe
           </ul>
         </div>
       )}
-      <div className="why">
-        <strong>Почему такие условия</strong>
-        <p className="small">{offer.summary}</p>
-        <ul className="small">
-          {offer.reasons.map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
-        <p className="muted small">
-          Ставка складывается из ключевой ставки, надбавки продукта и надбавки за риск: чем лучше оценка заявки, тем ниже
-          надбавка.
-        </p>
-      </div>
+      <p className="muted small">{offer.summary}. Полная стоимость кредита и график платежей будут в договоре.</p>
       {error != null && <ErrorBox error={error} />}
       {actionable && (
         <div className="row-actions">
@@ -334,36 +315,23 @@ export function OfferBlock({ application, onDone }: { application: ApplicationDe
   );
 }
 
-function SigningBlock({ application, onDone }: { application: ApplicationDetail; onDone: (a?: ApplicationDetail) => void }) {
-  const [demoCode, setDemoCode] = useState<string | null>(null);
-  const [hint, setHint] = useState('');
-  const [code, setCode] = useState('');
+export function SigningBlock({
+  application,
+  onDone,
+}: {
+  application: ApplicationDetail;
+  onDone: (a?: ApplicationDetail) => void;
+}) {
   const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const signing = application.signing;
+  const offer = application.offer;
 
-  async function requestCode() {
+  async function sign() {
     setBusy(true);
     setError(null);
     try {
-      const r = await api.sendCode(application.id);
-      setDemoCode(r.demoCode ?? null);
-      setHint(r.hint);
-      setCode('');
-      onDone();
-    } catch (e) {
-      setError(e);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function confirm() {
-    setBusy(true);
-    setError(null);
-    try {
-      onDone(await api.confirmCode(application.id, code));
+      onDone(await api.sign(application.id));
     } catch (e) {
       setError(e);
       onDone();
@@ -371,77 +339,25 @@ function SigningBlock({ application, onDone }: { application: ApplicationDetail;
       setBusy(false);
     }
   }
-
-  const blocked = signing?.blocked;
-  const codeActive = signing?.codeRequested && !blocked && !signing.confirmed;
 
   return (
-    <div className="card">
+    <div className="card signing">
       <h2>Подписание договора</h2>
-      <ol className="sign-steps">
-        <li>
-          <label className="check">
-            <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-            Ознакомился с условиями кредитного договора и даю согласие на зачисление средств на расчётный счёт
-          </label>
-        </li>
-        <li>
-          <button type="button" className="btn btn-ghost" onClick={requestCode} disabled={busy || !agree}>
-            {signing?.codeRequested ? 'Получить новый код' : 'Получить код'}
-          </button>
-          {demoCode && (
-            <div className="demo-code">
-              Демо-режим, ваш код: <code>{demoCode}</code>
-              <div className="muted small">{hint}</div>
-            </div>
-          )}
-        </li>
-        {codeActive && (
-          <li>
-            <div className="code-row">
-              <input
-                inputMode="numeric"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="Код из 6 цифр"
-                aria-label="Код подтверждения"
-              />
-              <button type="button" className="btn btn-primary" onClick={confirm} disabled={busy || code.length !== 6}>
-                Подписать
-              </button>
-            </div>
-            <div className="muted small">Осталось попыток: {signing?.attemptsLeft}</div>
-          </li>
-        )}
-      </ol>
-      {blocked && (
-        <div className="alert alert-error">Код введён неверно три раза. Запросите новый код, чтобы продолжить.</div>
-      )}
-      {error != null && <ErrorBox error={error} />}
-    </div>
-  );
-}
-
-function DecisionBlock({ application }: { application: ApplicationDetail }) {
-  const d = application.decision!;
-  const declined = application.status === 'DECLINED';
-  return (
-    <div className={`card ${declined ? 'declined' : ''}`}>
-      <h2>Почему так</h2>
-      <p>{d.summary}</p>
-      {d.hardStopReason && (
-        <div className="alert alert-error">
-          Причина: {d.hardStopReason}. Это обязательное условие, при котором банк не может выдать кредит.
-        </div>
-      )}
-      {d.grade && (
-        <p className="small">
-          <Term hint="Итоговая оценка риска по заявке: A — низкий риск, D — высокий">Оценка заявки</Term>: грейд{' '}
-          <strong>{d.grade}</strong>, {d.score} баллов из 100. Ниже показано, что повлияло на оценку.
+      {offer && (
+        <p>
+          Кредит <strong>{formatMoney(offer.amount)}</strong> на {formatMonths(offer.termMonths)} под{' '}
+          {formatPct(offer.ratePct)} годовых, платёж {formatMoney(offer.monthlyPayment)} в месяц. Деньги поступят на
+          расчётный счёт сразу после подписания.
         </p>
       )}
-      <FactorTable factors={d.factors} />
+      <label className="check">
+        <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+        Ознакомился с условиями кредитного договора и согласен на зачисление средств на расчётный счёт
+      </label>
+      {error != null && <ErrorBox error={error} />}
+      <button type="button" className="btn btn-primary btn-lg" onClick={sign} disabled={busy || !agree}>
+        {busy ? 'Подписываем…' : 'Подписать договор и получить деньги'}
+      </button>
     </div>
   );
 }

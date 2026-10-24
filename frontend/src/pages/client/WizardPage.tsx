@@ -325,7 +325,7 @@ export function WizardPage() {
             <ul className="doc-list">
               {draft.documents.map((d) => (
                 <li key={d.id}>
-                  {d.fileName} <span className="muted small">· {docTypeLabel[d.docType] ?? d.docType} · {formatSize(d.sizeBytes)}</span>
+                  {d.fileName} <span className="muted small">{docTypeLabel[d.docType] ?? d.docType}, {formatSize(d.sizeBytes)}</span>
                 </li>
               ))}
             </ul>

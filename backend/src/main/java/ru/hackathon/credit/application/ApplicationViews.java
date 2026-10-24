@@ -64,7 +64,7 @@ public class ApplicationViews {
         Map<String, Product> byCode = products.findAll().stream()
                 .collect(Collectors.toMap(Product::getCode, Function.identity()));
         return apps.stream().map(a -> new ApplicationSummary(a.getId(), a.getNumber(), a.getStatus(),
-                a.getStatus().label(), a.getProductCode(), byCode.get(a.getProductCode()).getName(),
+                a.getStatus().clientLabel(), a.getProductCode(), byCode.get(a.getProductCode()).getName(),
                 a.getRequestedAmount(), a.getRequestedTermMonths(), a.getCreatedAt(), a.getUpdatedAt(),
                 nextStep(a.getStatus()))).toList();
     }
@@ -87,7 +87,7 @@ public class ApplicationViews {
         ClientOfferView offer = a.getCurrentOfferId() == null ? null
                 : offers.findById(a.getCurrentOfferId()).map(o -> clientOfferView(o, a)).orElse(null);
 
-        return new ApplicationDetail(a.getId(), a.getNumber(), a.getStatus(), a.getStatus().label(),
+        return new ApplicationDetail(a.getId(), a.getNumber(), a.getStatus(), a.getStatus().clientLabel(),
                 a.getStatus().isFinal(), a.getProductCode(), product.getName(), product.isRequiresCollateral(),
                 a.getPurpose(), purpose.label(), a.getRequestedAmount(), a.getRequestedTermMonths(),
                 a.getMonthlyObligationsDeclared(), a.getCollateralDescription(), a.isConsentDataProcessing(),
@@ -131,7 +131,7 @@ public class ApplicationViews {
             if (h.getFromStatus() != null && h.getFromStatus() == h.getToStatus()) {
                 continue;
             }
-            result.add(new HistoryEntry(h.getFromStatus(), h.getToStatus(), h.getToStatus().label(),
+            result.add(new HistoryEntry(h.getFromStatus(), h.getToStatus(), h.getToStatus().clientLabel(),
                     h.getActorType(), actorLabel(h.getActorType()), clientComment(h, previous), h.getCreatedAt()));
             previous = h.getToStatus();
         }

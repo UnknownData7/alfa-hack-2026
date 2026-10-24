@@ -83,7 +83,7 @@ export function LoginPage() {
               >
                 {name}
               </button>
-              <span className="muted"> — {description}</span>
+              <span className="muted">{description}</span>
             </li>
           ))}
         </ul>

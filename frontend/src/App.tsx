@@ -8,6 +8,8 @@ import { LoginPage } from './pages/LoginPage';
 import { QueuePage } from './pages/bank/QueuePage';
 import { TaskPage } from './pages/bank/TaskPage';
 import { ApplicationPage } from './pages/client/ApplicationPage';
+import { BenefitsPage } from './pages/client/BenefitsPage';
+import { HistoryPage } from './pages/client/HistoryPage';
 import { HomePage } from './pages/client/HomePage';
 import { NeedPage } from './pages/client/NeedPage';
 import { WizardPage } from './pages/client/WizardPage';
@@ -31,6 +33,8 @@ export default function App() {
         }
       />
       <Route path="/" element={<Protected role="CLIENT"><HomePage /></Protected>} />
+      <Route path="/history" element={<Protected role="CLIENT"><HistoryPage /></Protected>} />
+      <Route path="/benefits" element={<Protected role="CLIENT"><BenefitsPage /></Protected>} />
       <Route path="/need" element={<Protected role="CLIENT"><NeedPage /></Protected>} />
       <Route path="/applications/new" element={<Protected role="CLIENT"><WizardPage /></Protected>} />
       <Route path="/applications/:id/edit" element={<Protected role="CLIENT"><WizardPage /></Protected>} />

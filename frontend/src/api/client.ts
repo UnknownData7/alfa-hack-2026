@@ -1,4 +1,5 @@
 import type {
+  Activity,
   ApplicationDetail,
   ApplicationSummary,
   CompanyProfile,
@@ -11,7 +12,6 @@ import type {
   PurposeOption,
   RecalculateResponse,
   Recommendation,
-  SendCodeResponse,
   TaskCard,
   TaskListItem,
   User,
@@ -133,12 +133,11 @@ export const api = {
     }),
   acceptOffer: (id: number) => request<ApplicationDetail>('POST', `/api/applications/${id}/offer/accept`),
   declineOffer: (id: number) => request<ApplicationDetail>('POST', `/api/applications/${id}/offer/decline`),
-  sendCode: (id: number) => request<SendCodeResponse>('POST', `/api/applications/${id}/signing/send-code`),
-  confirmCode: (id: number, code: string) =>
-    request<ApplicationDetail>('POST', `/api/applications/${id}/signing/confirm`, { code }),
+  sign: (id: number) => request<ApplicationDetail>('POST', `/api/applications/${id}/sign`, { termsAccepted: true }),
+  activity: () => request<Activity[]>('GET', '/api/client/activity'),
 
   feed: () => request<FeedCard[]>('GET', '/api/feed'),
-  markFeedRead: (id: number) => request<void>('POST', `/api/feed/${id}/read`),
+  dismissFeedCard: (id: string) => request<void>('POST', `/api/feed/${encodeURIComponent(id)}/read`),
 
   tasks: (filter: string) => request<TaskListItem[]>('GET', `/api/bank/tasks?filter=${encodeURIComponent(filter)}`),
   takeNext: () => request<TaskCard>('POST', '/api/bank/tasks/take-next'),

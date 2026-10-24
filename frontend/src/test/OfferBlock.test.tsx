@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ApplicationDetail } from '../api/types';
-import { OfferBlock } from '../pages/client/ApplicationPage';
+import { OfferBlock, SigningBlock } from '../pages/client/ApplicationPage';
+import { fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 
 function application(status: ApplicationDetail['status']): ApplicationDetail {
   return {
@@ -32,8 +34,7 @@ function application(status: ApplicationDetail['status']): ApplicationDetail {
       totalPayment: 890934,
       overpayment: 50934,
       status: 'ACTIVE',
-      summary: 'Банк готов выдать кредит на меньшую сумму',
-      reasons: ['Оценка риска: грейд B'],
+      summary: 'Банк готов выдать кредит на других условиях',
       changes: ['Сумма снижена с 1 400 000 до 840 000 ₽'],
       createdAt: '2026-10-23T10:01:00Z',
     },
@@ -48,9 +49,20 @@ describe('OfferBlock', () => {
     render(<OfferBlock application={application('OFFER_MADE')} onDone={() => {}} />);
     expect(screen.getByText('Встречное предложение банка')).toBeInTheDocument();
     expect(screen.getByText('Сумма снижена с 1 400 000 до 840 000 ₽')).toBeInTheDocument();
-    expect(screen.getByText('Оценка риска: грейд B')).toBeInTheDocument();
+    // Клиент не видит внутреннюю оценку банка
+    expect(screen.queryByText(/грейд|балл|скоринг/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Принять и перейти к подписанию' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Отклонить' })).toBeEnabled();
+  });
+
+  it('подписание по кнопке доступно только после согласия с условиями', () => {
+    const onDone = vi.fn();
+    render(<SigningBlock application={application('SIGNING')} onDone={onDone} />);
+    const button = screen.getByRole('button', { name: 'Подписать договор и получить деньги' });
+    expect(button).toBeDisabled();
+    expect(screen.queryByText(/код|SMS/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(button).toBeEnabled();
   });
 
   it('не даёт действий после принятия предложения', () => {

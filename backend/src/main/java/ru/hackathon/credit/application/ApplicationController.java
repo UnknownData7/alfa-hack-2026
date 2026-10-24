@@ -77,7 +77,7 @@ public class ApplicationController {
         metrics.counter("credit.applications.submitted", "product", app.getProductCode()).increment();
         pipeline.process(app.getId());
         return ResponseEntity.accepted().body(new SubmitResponse(app.getId(), app.getNumber(), app.getStatus(),
-                app.getStatus().label(), "Заявка отправлена. Статус обновится автоматически."));
+                app.getStatus().clientLabel(), "Заявка отправлена. Статус обновится автоматически."));
     }
 
     @PostMapping(path = "/{id}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

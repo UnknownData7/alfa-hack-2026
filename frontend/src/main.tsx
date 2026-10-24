@@ -5,6 +5,8 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ApiError } from './api/client';
 import { AuthProvider } from './auth/AuthContext';
+import '@fontsource-variable/golos-text';
+import { SettingsProvider } from './settings/SettingsContext';
 import './theme.css';
 
 const queryClient = new QueryClient({
@@ -20,11 +22,13 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <SettingsProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <App />
         </AuthProvider>
       </BrowserRouter>
+      </SettingsProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

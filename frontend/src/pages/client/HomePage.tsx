@@ -1,124 +1,79 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
-import { formatAge, formatDateTime, formatMoney, formatMonths } from '../../api/format';
-import { Empty, ErrorBox, Loader, StatusBadge } from '../../components/ui';
+import type { FeedCard } from '../../api/types';
+import { useAuth } from '../../auth/AuthContext';
+import { ApplicationsList } from '../../components/ApplicationsList';
+import { FeedList } from '../../components/FeedList';
+import { ErrorBox, Loader } from '../../components/ui';
+
+function greeting(date = new Date()) {
+  const h = date.getHours();
+  if (h < 5) return 'Доброй ночи';
+  if (h < 12) return 'Доброе утро';
+  if (h < 18) return 'Добрый день';
+  return 'Добрый вечер';
+}
 
 export function HomePage() {
-  const profile = useQuery({ queryKey: ['profile'], queryFn: api.profile });
-  const applications = useQuery({ queryKey: ['applications'], queryFn: api.applications, refetchInterval: 5000 });
-  const feed = useQuery({ queryKey: ['feed'], queryFn: api.feed, refetchInterval: 5000 });
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const markRead = useMutation({
-    mutationFn: (id: number) => api.markFeedRead(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
+  const feed = useQuery({ queryKey: ['feed'], queryFn: api.feed, refetchInterval: 5000 });
+  const dismiss = useMutation({
+    mutationFn: (id: string) => api.dismissFeedCard(id),
+    // Карточка исчезает сразу, не дожидаясь ответа сервера
+    onMutate: (id) => {
+      queryClient.setQueryData<FeedCard[]>(['feed'], (cards) => cards?.filter((c) => c.id !== id));
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['feed'] }),
   });
+  const firstName = user?.fullName.split(/\s+/)[1];
 
   return (
-    <div className="grid-home">
-      <section className="stack">
-        {profile.isLoading && <Loader />}
-        {profile.error && <ErrorBox error={profile.error} onRetry={() => profile.refetch()} />}
-        {profile.data && (
-          <div className="card company-card">
-            <div className="company-head">
-              <div>
-                <div className="muted small">{profile.data.legalFormLabel}</div>
-                <h1>{profile.data.name}</h1>
-                <div className="muted small">ИНН {profile.data.inn}</div>
-              </div>
-              <Link to="/need" className="btn btn-primary">
-                Нужно финансирование
-              </Link>
-            </div>
-            <div className="stats">
-              <div>
-                <span className="muted small">Бизнес работает</span>
-                <strong>{formatAge(profile.data.businessAgeMonths)}</strong>
-              </div>
-              <div>
-                <span className="muted small">Оборот за 12 месяцев</span>
-                <strong>{formatMoney(profile.data.annualTurnover)}</strong>
-              </div>
-              <div>
-                <span className="muted small">В среднем в месяц</span>
-                <strong>{formatMoney(profile.data.avgMonthlyTurnover)}</strong>
-              </div>
-              <div>
-                <span className="muted small">Счёт в банке</span>
-                <strong>{profile.data.accountMasked}</strong>
-              </div>
-            </div>
-            <p className="muted small">
-              Эти данные банк уже знает о вашей компании, вводить их в заявке не нужно.
-            </p>
+    <div className="home">
+      <h1 className="greeting">
+        {greeting()}
+        {firstName ? `, ${firstName}` : ''}
+      </h1>
+
+      <div className="banners">
+        <Link to="/need" className="banner banner-credit">
+          <div className="banner-copy">
+            <h2>Деньги на бизнес без визита в офис</h2>
+            <p>Подберём кредит под задачу. По многим заявкам решение приходит сразу, деньги зачисляются на счёт.</p>
+            <span className="banner-cta">Подобрать кредит</span>
           </div>
-        )}
+          <span className="art art-coins" aria-hidden>
+            <i />
+            <i />
+            <i />
+          </span>
+        </Link>
+        <Link to="/benefits" className="banner banner-referral">
+          <div className="banner-copy">
+            <h2>Деньги за рекомендации</h2>
+            <p>5 000 ₽ за каждого знакомого предпринимателя, который откроет счёт по вашей ссылке.</p>
+            <span className="banner-cta">Пригласить</span>
+          </div>
+          <span className="art art-gift" aria-hidden>
+            <i />
+            <i />
+          </span>
+        </Link>
+      </div>
 
-        <div className="card">
-          <h2>Мои заявки</h2>
-          {applications.isLoading && <Loader />}
-          {applications.error && <ErrorBox error={applications.error} onRetry={() => applications.refetch()} />}
-          {applications.data && applications.data.length === 0 && (
-            <Empty title="Заявок пока нет">Начните с кнопки «Нужно финансирование».</Empty>
-          )}
-          {applications.data && applications.data.length > 0 && (
-            <ul className="app-list">
-              {applications.data.map((a) => (
-                <li key={a.id}>
-                  <Link to={a.status === 'DRAFT' ? `/applications/${a.id}/edit` : `/applications/${a.id}`}>
-                    <div className="app-row">
-                      <div>
-                        <strong>{a.productName}</strong>
-                        <div className="muted small">
-                          {a.number} · {formatMoney(a.requestedAmount)} на {formatMonths(a.requestedTermMonths)}
-                        </div>
-                      </div>
-                      <StatusBadge status={a.status} label={a.statusLabel} />
-                    </div>
-                    <div className="small next-hint">
-                      {a.nextStep.title} · обновлено {formatDateTime(a.updatedAt)}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
-
-      <aside className="card feed">
-        <h2>Для вас</h2>
-        {feed.isLoading && <Loader />}
-        {feed.error && <ErrorBox error={feed.error} onRetry={() => feed.refetch()} />}
-        {feed.data && feed.data.length === 0 && <Empty title="Пока ничего нового" />}
-        {feed.data?.map((card) => (
-          <article key={card.id} className={`feed-card feed-${card.type.toLowerCase()} ${card.read ? 'read' : ''}`}>
-            <div className="feed-type">
-              {card.type === 'STATUS' ? 'Событие' : card.type === 'TIP' ? 'Подсказка' : 'Новость'}
-            </div>
-            <h3>{card.title}</h3>
-            <p>{card.body}</p>
-            <div className="feed-reason">{card.reason}</div>
-            <div className="feed-actions">
-              {card.relatedApplicationId && (
-                <Link to={`/applications/${card.relatedApplicationId}`} className="link small">
-                  Открыть заявку
-                </Link>
-              )}
-              {card.type === 'STATUS' && !card.read && (
-                <button
-                  type="button"
-                  className="link small"
-                  onClick={() => markRead.mutate(Number(card.id.replace('event-', '')))}
-                >
-                  Прочитано
-                </button>
-              )}
-            </div>
-          </article>
-        ))}
-      </aside>
+      <div className="home-grid">
+        <ApplicationsList title="Мои заявки" limit={4} />
+        <section className="card feed" aria-labelledby="feed-title">
+          <div className="section-head">
+            <h2 id="feed-title">Для вас</h2>
+            {feed.data && feed.data.length > 0 && <span className="counter">{feed.data.length}</span>}
+          </div>
+          {feed.isLoading && <Loader />}
+          {feed.error && <ErrorBox error={feed.error} onRetry={() => feed.refetch()} />}
+          {feed.data && <FeedList cards={feed.data} onDismiss={(id) => dismiss.mutate(id)} />}
+        </section>
+      </div>
     </div>
   );
 }

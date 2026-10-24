@@ -15,13 +15,13 @@ describe('StatusTracker', () => {
   it('подсвечивает текущий шаг и скрывает ручную проверку, если её не было', () => {
     render(<StatusTracker status="OFFER_MADE" history={[entry('DRAFT'), entry('SUBMITTED'), entry('SCORING'), entry('OFFER_MADE')]} />);
     expect(screen.getByText('Предложение').closest('li')).toHaveAttribute('aria-current', 'step');
-    expect(screen.queryByText('Ручная проверка')).not.toBeInTheDocument();
-    expect(screen.getByText('Скоринг').closest('li')).toHaveClass('done');
+    expect(screen.queryByText('Рассмотрение')).not.toBeInTheDocument();
+    expect(screen.getByText('Проверка').closest('li')).toHaveClass('done');
   });
 
   it('показывает ручную проверку, если заявка через неё проходила', () => {
     render(<StatusTracker status="MANUAL_REVIEW" history={[entry('DRAFT'), entry('SUBMITTED'), entry('SCORING')]} />);
-    expect(screen.getByText('Ручная проверка').closest('li')).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByText('Рассмотрение').closest('li')).toHaveAttribute('aria-current', 'step');
   });
 
   it('заменяет финал на отказ', () => {

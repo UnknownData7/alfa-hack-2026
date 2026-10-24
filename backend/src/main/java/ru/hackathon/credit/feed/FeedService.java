@@ -148,7 +148,7 @@ public class FeedService {
     static String reason(NewsItem n, Company c, LoanApplication current) {
         List<String> parts = new ArrayList<>();
         if (n.getTargetStatus() != null && current != null) {
-            parts.add("статус вашей заявки «" + current.getStatus().label() + "»");
+            parts.add("статус вашей заявки «" + current.getStatus().clientLabel() + "»");
         }
         if (n.getTargetProductCode() != null) {
             parts.add("вы оформляете этот продукт");
@@ -185,7 +185,7 @@ public class FeedService {
             case ISSUED -> "Кредит выдан";
             case DECLINED -> "Решение по заявке";
             case CLOSED -> "Заявка закрыта";
-            default -> s.label();
+            default -> s.clientLabel();
         };
     }
 
@@ -195,11 +195,11 @@ public class FeedService {
             case NEED_INFO -> "ответьте на запрос на странице заявки, чтобы продолжить рассмотрение.";
             case MANUAL_REVIEW -> "заявку проверяет сотрудник банка, обычно это занимает несколько часов.";
             case OFFER_MADE -> "посмотрите условия и примите решение.";
-            case SIGNING -> "подтвердите договор кодом на странице заявки.";
+            case SIGNING -> "подпишите договор на странице заявки, деньги поступят на счёт сразу.";
             case ISSUED -> "средства зачислены на расчётный счёт (симуляция).";
             case DECLINED -> "банк не может одобрить заявку сейчас. Новую заявку можно подать позже.";
             case CLOSED -> "вы отказались от предложения.";
-            default -> s.label();
+            default -> s.clientLabel();
         };
     }
 }

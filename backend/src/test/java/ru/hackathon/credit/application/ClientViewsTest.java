@@ -48,7 +48,7 @@ class ClientViewsTest {
 
         assertEquals(7, result.size(), "Записи без смены статуса скрываются");
         String all = result.toString();
-        for (String secret : new String[] {"Грейд", "балл", "нагрузка", "Выручка", "Стоп-фактор", "Пересчёт"}) {
+        for (String secret : new String[] {"Грейд", "балл", "нагрузка", "Выручка", "Стоп-фактор", "Пересчёт", "Скоринг", "Ручная проверка"}) {
             assertFalse(all.contains(secret), "Клиенту ушло: " + secret);
         }
         assertEquals("Заявку рассматривает специалист банка", result.get(3).comment());

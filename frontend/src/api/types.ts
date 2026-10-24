@@ -43,6 +43,7 @@ export interface CompanyProfile {
   employeesCount: number;
   taxSystem: string;
   accountMasked: string;
+  accountBalance: number;
   monthsWithBank: number;
   annualTurnover: number;
   avgMonthlyTurnover: number;
@@ -147,28 +148,15 @@ export interface Offer {
   createdAt: string;
 }
 
+/** Предложение для клиента: условия и что изменилось, без внутренних причин решения банка. */
+export type ClientOffer = Omit<Offer, 'reasons'>;
+
 export interface Factor {
   code: string;
   title: string;
   value: string;
   points: number;
   comment: string;
-}
-
-export interface Decision {
-  summary: string;
-  reasonCode?: string;
-  grade?: string;
-  score?: number;
-  hardStopReason?: string;
-  factors: Factor[];
-}
-
-export interface Signing {
-  codeRequested: boolean;
-  attemptsLeft: number;
-  blocked: boolean;
-  confirmed: boolean;
 }
 
 export interface Disbursement {
@@ -200,12 +188,10 @@ export interface ApplicationDetail {
   updatedAt: string;
   submittedAt?: string;
   nextStep: NextStep;
-  decision?: Decision;
-  offer?: Offer;
+  offer?: ClientOffer;
   history: HistoryEntry[];
   infoRequests: InfoRequest[];
   documents: DocumentItem[];
-  signing?: Signing;
   disbursement?: Disbursement;
 }
 
@@ -232,10 +218,14 @@ export interface FeedCard {
   read: boolean;
 }
 
-export interface SendCodeResponse {
-  attemptsLeft: number;
-  demoCode?: string;
-  hint: string;
+export interface Activity {
+  type: 'CREDIT' | 'STATUS';
+  title: string;
+  description: string;
+  amount?: number;
+  applicationId: number;
+  applicationNumber: string;
+  createdAt: string;
 }
 
 // ---------- Банк ----------

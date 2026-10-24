@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { ApiError } from '../api/client';
+import { formatMoney } from '../api/format';
 import type { ApplicationStatus, Factor } from '../api/types';
+import { useSettings } from '../settings/SettingsContext';
 
 export function Loader({ text = 'Загружаем…' }: { text?: string }) {
   return (
@@ -100,5 +102,16 @@ export function KeyValue({ items }: { items: Array<[string, ReactNode]> }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+/** Сумма в рублях. Для остатков (sensitive) учитывается настройка «Скрывать остатки». */
+export function Money({ value, sensitive = false, className }: { value?: number | null; sensitive?: boolean; className?: string }) {
+  const { hideBalance } = useSettings();
+  const hidden = sensitive && hideBalance;
+  return (
+    <span className={`money ${className ?? ''}`} aria-label={hidden ? 'Сумма скрыта' : undefined}>
+      {hidden ? '••• ₽' : formatMoney(value)}
+    </span>
   );
 }

@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { formatMoney, formatPct } from '../../api/format';
+import { ApplicationsList } from '../../components/ApplicationsList';
 import { ErrorBox, Loader } from '../../components/ui';
 
 export function NeedPage() {
@@ -30,8 +31,7 @@ export function NeedPage() {
       <div className="card">
         <h1>На что нужны деньги?</h1>
         <p className="muted">
-          Опишите задачу, и мы подберём подходящие продукты. Объясним, почему продукт подходит или нет, и покажем
-          ориентировочную ставку.
+          Укажите цель, сумму и срок. Подберём продукты, объясним, какой подходит, и покажем ориентировочную ставку.
         </p>
         {purposes.isLoading && <Loader />}
         {purposes.error && <ErrorBox error={purposes.error} />}
@@ -96,11 +96,11 @@ export function NeedPage() {
             </div>
           ))}
           <p className="muted small">
-            Ставка ориентировочная: итоговые условия зависят от оценки заявки. Ставка складывается из ключевой ставки,
-            надбавки продукта и надбавки за риск.
+            Ставка ориентировочная. Точные условия банк покажет в предложении после рассмотрения заявки.
           </p>
         </div>
       )}
+      <ApplicationsList title="Мои заявки" />
     </div>
   );
 }

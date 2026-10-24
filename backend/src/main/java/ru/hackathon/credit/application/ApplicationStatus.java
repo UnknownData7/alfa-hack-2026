@@ -41,6 +41,17 @@ public enum ApplicationStatus {
         return label;
     }
 
+    /** Название для клиента: без внутренних терминов банка вроде «скоринг». */
+    public String clientLabel() {
+        return switch (this) {
+            case SCORING -> "Проверка";
+            case MANUAL_REVIEW -> "На рассмотрении";
+            case OFFER_MADE -> "Есть предложение";
+            case ISSUED -> "Кредит выдан";
+            default -> label;
+        };
+    }
+
     public boolean canMoveTo(ApplicationStatus target) {
         return TRANSITIONS.get(this).contains(target);
     }

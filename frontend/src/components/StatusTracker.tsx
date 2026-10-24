@@ -9,8 +9,8 @@ interface Step {
 const BASE_STEPS: Step[] = [
   { key: 'draft', label: 'Черновик', statuses: ['DRAFT'] },
   { key: 'submitted', label: 'Подана', statuses: ['SUBMITTED', 'NEED_INFO'] },
-  { key: 'scoring', label: 'Скоринг', statuses: ['SCORING'] },
-  { key: 'review', label: 'Ручная проверка', statuses: ['MANUAL_REVIEW'] },
+  { key: 'scoring', label: 'Проверка', statuses: ['SCORING'] },
+  { key: 'review', label: 'Рассмотрение', statuses: ['MANUAL_REVIEW'] },
   { key: 'offer', label: 'Предложение', statuses: ['OFFER_MADE'] },
   { key: 'signing', label: 'Подписание', statuses: ['SIGNING'] },
   { key: 'issued', label: 'Выдан', statuses: ['ISSUED'] },
