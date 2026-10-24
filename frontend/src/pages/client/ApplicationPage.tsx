@@ -50,7 +50,7 @@ export function ApplicationPage() {
         </div>
         <StatusTracker status={a.status} history={a.history} />
         <div className={`next-step next-${a.nextStep.action.toLowerCase()}`}>
-          <strong>Что дальше: {a.nextStep.title}</strong>
+          <strong>{a.nextStep.title}</strong>
           <p>{a.nextStep.text}</p>
           {a.nextStep.action === 'WAIT' && <span className="spinner small" aria-hidden />}
           {a.nextStep.action === 'NEW_APPLICATION' && (
