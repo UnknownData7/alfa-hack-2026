@@ -9,9 +9,30 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import ru.hackathon.credit.scoring.ScoringRun;
+import ru.hackathon.credit.scoring.ScoringRunRepository;
 
 /** Сквозные сценарии из docs/TEST_SCENARIOS.md. */
 class ScenarioIntegrationTest extends IntegrationTestBase {
+
+    @Autowired
+    private ScoringRunRepository scoringRuns;
+
+    /** Внутренняя оценка банка проверяется по базе: клиентскому API она недоступна. */
+    private ScoringRun lastRun(long id) {
+        return scoringRuns.findTopByApplicationIdOrderByRunNoDesc(id).orElseThrow();
+    }
+
+    /** В ответе клиенту нет баллов, грейда, факторов и причин решения. */
+    private void assertNoInternalScoring(JsonNode app) {
+        String json = app.toString();
+        for (String field : new String[] {"\"decision\"", "\"grade\"", "\"score\"", "\"totalScore\"",
+                "\"factors\"", "\"reasons\"", "\"reasonCode\"", "\"hardStop\""}) {
+            assertFalse(json.contains(field), "Клиенту не должно уходить поле " + field + ": " + json);
+        }
+    }
 
     @Test
     void s1AutoApprovalToDisbursement() throws Exception {
@@ -25,17 +46,27 @@ class ScenarioIntegrationTest extends IntegrationTestBase {
         JsonNode app = awaitStatus(token, id, "OFFER_MADE", "DECLINED", "MANUAL_REVIEW");
 
         assertEquals("OFFER_MADE", app.get("status").asText());
-        assertEquals("A", app.get("decision").get("grade").asText());
+        assertEquals("A", lastRun(id).getGrade());
+        assertNoInternalScoring(app);
         assertEquals("INITIAL", app.get("offer").get("kind").asText());
         assertEquals(0, app.get("offer").get("amount").decimalValue().compareTo(new java.math.BigDecimal("1200000")));
 
         postJson(token, "/api/applications/" + id + "/offer/accept", null, 200);
-        String code = postJson(token, "/api/applications/" + id + "/signing/send-code", null, 200)
-                .get("demoCode").asText();
-        JsonNode issued = postJson(token, "/api/applications/" + id + "/signing/confirm", Map.of("code", code), 200);
+        // Без подтверждения ознакомления с условиями договор не подписывается
+        postJson(token, "/api/applications/" + id + "/sign", Map.of("termsAccepted", false), 422);
+        java.math.BigDecimal before = getJson(token, "/api/client/profile", 200).get("accountBalance").decimalValue();
+        JsonNode issued = postJson(token, "/api/applications/" + id + "/sign", Map.of("termsAccepted", true), 200);
 
         assertEquals("ISSUED", issued.get("status").asText());
         assertTrue(issued.get("disbursement").get("simulated").asBoolean());
+        java.math.BigDecimal after = getJson(token, "/api/client/profile", 200).get("accountBalance").decimalValue();
+        assertEquals(0, after.subtract(before).compareTo(new java.math.BigDecimal("1200000")));
+        // Повторное подписание невозможно
+        postJson(token, "/api/applications/" + id + "/sign", Map.of("termsAccepted", true), 409);
+
+        JsonNode activity = getJson(token, "/api/client/activity", 200);
+        assertEquals("CREDIT", activity.get(0).get("type").asText());
+        assertNoInternalScoring(activity);
         JsonNode feed = getJson(token, "/api/feed", 200);
         assertTrue(feed.toString().contains("Кредит выдан"));
     }
@@ -48,7 +79,8 @@ class ScenarioIntegrationTest extends IntegrationTestBase {
         JsonNode app = awaitStatus(token, id, "OFFER_MADE", "DECLINED", "MANUAL_REVIEW");
 
         assertEquals("OFFER_MADE", app.get("status").asText());
-        assertEquals("B", app.get("decision").get("grade").asText());
+        assertEquals("B", lastRun(id).getGrade());
+        assertNoInternalScoring(app);
         assertEquals("COUNTER", app.get("offer").get("kind").asText());
         assertEquals(0, app.get("offer").get("amount").decimalValue().compareTo(new java.math.BigDecimal("840000")));
         assertFalse(app.get("offer").get("changes").isEmpty());
@@ -85,7 +117,10 @@ class ScenarioIntegrationTest extends IntegrationTestBase {
         postJson(client, "/api/applications/" + id + "/submit", null, 202);
         JsonNode app = awaitStatus(client, id, "MANUAL_REVIEW", "OFFER_MADE", "DECLINED");
         assertEquals("MANUAL_REVIEW", app.get("status").asText());
-        assertEquals("C", app.get("decision").get("grade").asText());
+        assertEquals("C", lastRun(id).getGrade());
+        assertNoInternalScoring(app);
+        assertEquals("Заявку рассматривает специалист банка",
+                app.get("history").get(app.get("history").size() - 1).get("comment").asText());
 
         String uw1 = login("uw1");
         JsonNode card = postJson(uw1, "/api/bank/tasks/take-next", null, 200);
@@ -138,18 +173,22 @@ class ScenarioIntegrationTest extends IntegrationTestBase {
 
         JsonNode offer = awaitStatus(client, id, "OFFER_MADE");
         assertEquals("COUNTER", offer.get("offer").get("kind").asText());
+        // Комментарий андеррайтера остаётся внутри банка
+        assertFalse(offer.toString().contains("сезонности"));
+        assertNoInternalScoring(offer);
     }
 
     @Test
-    void s5AutoDeclineWithReasons() throws Exception {
+    void s5AutoDeclineWithoutReasonsForClient() throws Exception {
         String token = login("vector-opt");
         long id = draft(token, "WORKING_EXPRESS", "WORKING_CAPITAL", 2_000_000, 12, null);
         postJson(token, "/api/applications/" + id + "/submit", null, 202);
         JsonNode app = awaitStatus(token, id, "DECLINED", "OFFER_MADE", "MANUAL_REVIEW");
 
         assertEquals("DECLINED", app.get("status").asText());
-        assertEquals("D", app.get("decision").get("grade").asText());
-        assertFalse(app.get("decision").get("factors").isEmpty());
+        assertEquals("D", lastRun(id).getGrade());
+        assertNoInternalScoring(app);
+        assertEquals("NEW_APPLICATION", app.get("nextStep").get("action").asText());
     }
 
     @Test
@@ -160,7 +199,8 @@ class ScenarioIntegrationTest extends IntegrationTestBase {
         JsonNode app = awaitStatus(token, id, "DECLINED", "OFFER_MADE", "MANUAL_REVIEW");
 
         assertEquals("DECLINED", app.get("status").asText());
-        assertEquals("HARD_STOP", app.get("decision").get("reasonCode").asText());
+        assertTrue(lastRun(id).isHardStop());
+        assertNoInternalScoring(app);
     }
 
     @Test

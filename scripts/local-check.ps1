@@ -83,10 +83,9 @@ try {
         $app = Api 'GET' "/api/applications/$id" $null $token
         if ($app.status -in @('OFFER_MADE', 'DECLINED', 'MANUAL_REVIEW')) { break }
     }
-    Log "S1: статус $($app.status), грейд $($app.decision.grade), сумма $($app.offer.amount), ставка $($app.offer.ratePct), платёж $($app.offer.monthlyPayment)"
+    Log "S1: статус $($app.status), сумма $($app.offer.amount), ставка $($app.offer.ratePct), платёж $($app.offer.monthlyPayment)"
     Api 'POST' "/api/applications/$id/offer/accept" $null $token | Out-Null
-    $code = (Api 'POST' "/api/applications/$id/signing/send-code" $null $token).demoCode
-    $issued = Api 'POST' "/api/applications/$id/signing/confirm" @{ code = $code } $token
+    $issued = Api 'POST' "/api/applications/$id/sign" @{ termsAccepted = $true } $token
     Log "S1: итоговый статус $($issued.status), выдача смоделирована: $($issued.disbursement.simulated)"
     if ($issued.status -eq 'ISSUED') { Log 'СМОУК-ТЕСТ S1 ПРОЙДЕН' } else { Log 'СМОУК-ТЕСТ S1 НЕ ПРОЙДЕН' }
     Api 'POST' '/api/dev/reset-demo' $null $null | Out-Null

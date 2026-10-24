@@ -18,24 +18,36 @@ public class ApplicationPipeline {
 
     private final PipelineSteps steps;
     private final long stepDelayMs;
+    private final io.micrometer.core.instrument.MeterRegistry metrics;
 
-    public ApplicationPipeline(PipelineSteps steps, @Value("${app.pipeline.step-delay-ms}") long stepDelayMs) {
+    public ApplicationPipeline(PipelineSteps steps, @Value("${app.pipeline.step-delay-ms}") long stepDelayMs,
+                               io.micrometer.core.instrument.MeterRegistry metrics) {
         this.steps = steps;
         this.stepDelayMs = stepDelayMs;
+        this.metrics = metrics;
     }
 
     @Async("pipelineExecutor")
     public void process(Long applicationId) {
+        org.slf4j.MDC.put("applicationId", String.valueOf(applicationId));
+        io.micrometer.core.instrument.Timer.Sample sample = io.micrometer.core.instrument.Timer.start(metrics);
+        String result = "unknown";
         try {
             for (int i = 0; i < MAX_STEPS; i++) {
                 pause();
                 ApplicationStatus status = steps.advance(applicationId);
+                result = status.name();
                 if (status != ApplicationStatus.SUBMITTED && status != ApplicationStatus.SCORING) {
                     break;
                 }
             }
+            log.info("Обработка заявки {} завершена со статусом {}", applicationId, result);
         } catch (RuntimeException e) {
+            result = "error";
             log.error("Ошибка обработки заявки {}, обработка продолжится после перезапуска", applicationId, e);
+        } finally {
+            sample.stop(metrics.timer("credit.pipeline.duration", "result", result));
+            org.slf4j.MDC.remove("applicationId");
         }
     }
 

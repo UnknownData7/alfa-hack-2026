@@ -66,6 +66,16 @@ jobs:
           docker compose ps
       - name: Смоук-тест API через Newman
         run: npx -y newman@6 run postman/collection.json -e postman/environment.json --working-dir . --delay-request 200
+      - name: Заголовки безопасности и метрики
+        run: |
+          curl -sI http://localhost:3000/ | tee headers.txt
+          grep -qi '^x-content-type-options: nosniff' headers.txt
+          grep -qi '^x-frame-options: DENY' headers.txt
+          grep -qi '^content-security-policy:' headers.txt
+          ! grep -qi '^server: nginx/' headers.txt
+          # Метрики доступны только на служебном порту внутри сети стенда
+          docker compose exec -T backend wget -qO- http://localhost:8090/actuator/prometheus | grep -q '^credit_applications_submitted_total'
+          ! curl -fs http://localhost:3000/actuator/prometheus
       - name: Логи при ошибке
         if: failure()
         run: docker compose logs --no-color --tail 300

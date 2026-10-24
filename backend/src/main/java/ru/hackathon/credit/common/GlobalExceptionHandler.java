@@ -33,6 +33,15 @@ public class GlobalExceptionHandler {
         return build(e.status(), e.code(), titleFor(e.status()), e.getMessage(), null);
     }
 
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ProblemDetail> handleTooMany(TooManyRequestsException e) {
+        ResponseEntity<ProblemDetail> base = build(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_ATTEMPTS",
+                "Слишком много попыток", e.getMessage(), null);
+        return ResponseEntity.status(base.getStatusCode())
+                .header("Retry-After", String.valueOf(Math.max(1, e.retryAfter().toSeconds())))
+                .body(base.getBody());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException e) {
         Map<String, String> fields = new LinkedHashMap<>();

@@ -7,13 +7,11 @@ import java.util.List;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import ru.hackathon.credit.product.Purpose;
-import ru.hackathon.credit.scoring.Factor;
 
 /** Запросы и ответы API заявки для клиента. */
 public final class ApplicationDtos {
@@ -39,14 +37,11 @@ public final class ApplicationDtos {
             @Size(max = 1000, message = "Описание залога не длиннее 1000 символов") String collateralDescription) {
     }
 
-    public record ConfirmCodeRequest(
-            @NotBlank(message = "Введите код") @Pattern(regexp = "\\d{6}", message = "Код состоит из 6 цифр") String code) {
+    /** Подписание договора: клиент подтверждает, что ознакомился с условиями. */
+    public record SignRequest(Boolean termsAccepted) {
     }
 
     public record SubmitResponse(Long id, String number, ApplicationStatus status, String statusLabel, String message) {
-    }
-
-    public record SendCodeResponse(int attemptsLeft, String demoCode, String hint) {
     }
 
     public record NextStep(String title, String text, String action) {
@@ -75,12 +70,10 @@ public final class ApplicationDtos {
                             String summary, List<String> reasons, List<String> changes, Instant createdAt) {
     }
 
-    /** Пояснение решения для клиента: вывод, грейд и вклад факторов. */
-    public record DecisionView(String summary, String reasonCode, String grade, Integer score,
-                               String hardStopReason, List<Factor> factors) {
-    }
-
-    public record SigningView(boolean codeRequested, int attemptsLeft, boolean blocked, boolean confirmed) {
+    /** Предложение для клиента: условия и что изменилось относительно заявки, без внутренних причин решения. */
+    public record ClientOfferView(Long id, String kind, BigDecimal amount, int termMonths, BigDecimal ratePct,
+                                  BigDecimal monthlyPayment, BigDecimal totalPayment, BigDecimal overpayment,
+                                  String status, String summary, List<String> changes, Instant createdAt) {
     }
 
     public record DisbursementView(BigDecimal amount, String accountMasked, Instant executedAt, boolean simulated) {
@@ -93,8 +86,7 @@ public final class ApplicationDtos {
             BigDecimal monthlyObligationsDeclared, String collateralDescription,
             boolean consentDataProcessing, boolean consentCreditBureau, Long parentApplicationId,
             Instant createdAt, Instant updatedAt, Instant submittedAt,
-            NextStep nextStep, DecisionView decision, OfferView offer, List<HistoryEntry> history,
-            List<InfoRequestView> infoRequests, List<DocumentView> documents, SigningView signing,
-            DisbursementView disbursement) {
+            NextStep nextStep, ClientOfferView offer, List<HistoryEntry> history,
+            List<InfoRequestView> infoRequests, List<DocumentView> documents, DisbursementView disbursement) {
     }
 }

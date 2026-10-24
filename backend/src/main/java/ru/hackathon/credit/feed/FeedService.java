@@ -63,23 +63,25 @@ public class FeedService {
                 .findFirst();
 
         List<FeedCard> cards = new ArrayList<>();
-        for (FeedItem i : items.findTop20ByCompanyIdOrderByCreatedAtDesc(companyId)) {
+        // Прочитанные события и скрытые новости в ленту не попадают
+        for (FeedItem i : items.findTop20ByCompanyIdAndReadFalseOrderByCreatedAtDesc(companyId)) {
             cards.add(new FeedCard("event-" + i.getId(), i.getType(), i.getTitle(), i.getBody(), i.getReason(),
                     i.getRelatedApplicationId(), i.getCreatedAt(), i.isRead()));
         }
 
+        java.util.Set<Long> dismissed = new java.util.HashSet<>(news.dismissedNewsIds(companyId));
         List<NewsItem> matched = news.findAll().stream()
+                .filter(n -> !dismissed.contains(n.getId()))
                 .filter(n -> matches(n, company, current.orElse(null)))
                 .sorted(Comparator.comparingInt((NewsItem n) -> relevance(n)).reversed()
                         .thenComparing(NewsItem::getWeight, Comparator.reverseOrder()))
                 .limit(5)
                 .toList();
-        Instant now = Instant.now();
         for (NewsItem n : matched) {
             cards.add(new FeedCard("news-" + n.getId(), n.getType(), n.getTitle(), n.getBody(),
                     reason(n, company, current.orElse(null)), current.map(LoanApplication::getId)
                     .filter(id -> n.getTargetStatus() != null || n.getTargetProductCode() != null).orElse(null),
-                    now, false));
+                    n.getPublishedAt(), false));
         }
         // Подсказки к текущей заявке показываем первыми, затем события и общие новости
         cards.sort(Comparator.comparingInt((FeedCard c) -> order(c)).thenComparing(FeedCard::createdAt,
@@ -87,11 +89,29 @@ public class FeedService {
         return cards;
     }
 
+    /**
+     * Убирает карточку из ленты. Событие по заявке помечается прочитанным, новость или подсказка
+     * запоминается как скрытая для компании.
+     */
     @Transactional
-    public void markRead(Long companyId, Long itemId) {
-        FeedItem item = items.findByIdAndCompanyId(itemId, companyId)
-                .orElseThrow(() -> ApiException.notFound("Карточка ленты не найдена"));
-        item.setRead(true);
+    public void dismiss(Long companyId, String cardId) {
+        String[] parts = cardId == null ? new String[0] : cardId.split("-", 2);
+        if (parts.length != 2 || !parts[1].matches("\\d{1,18}")) {
+            throw ApiException.notFound("Карточка ленты не найдена");
+        }
+        long id = Long.parseLong(parts[1]);
+        switch (parts[0]) {
+            case "event" -> items.findByIdAndCompanyId(id, companyId)
+                    .orElseThrow(() -> ApiException.notFound("Карточка ленты не найдена"))
+                    .setRead(true);
+            case "news" -> {
+                if (!news.existsById(id)) {
+                    throw ApiException.notFound("Карточка ленты не найдена");
+                }
+                news.dismiss(companyId, id);
+            }
+            default -> throw ApiException.notFound("Карточка ленты не найдена");
+        }
     }
 
     static boolean matches(NewsItem n, Company c, LoanApplication current) {
@@ -149,11 +169,8 @@ public class FeedService {
         if ("TIP".equals(c.type()) && c.relatedApplicationId() != null) {
             return 0;
         }
-        if ("STATUS".equals(c.type()) && !c.read()) {
-            return 1;
-        }
         if ("STATUS".equals(c.type())) {
-            return 3;
+            return 1;
         }
         return 2;
     }
@@ -180,7 +197,7 @@ public class FeedService {
             case OFFER_MADE -> "посмотрите условия и примите решение.";
             case SIGNING -> "подтвердите договор кодом на странице заявки.";
             case ISSUED -> "средства зачислены на расчётный счёт (симуляция).";
-            case DECLINED -> "банк не может одобрить заявку, причины указаны на странице заявки.";
+            case DECLINED -> "банк не может одобрить заявку сейчас. Новую заявку можно подать позже.";
             case CLOSED -> "вы отказались от предложения.";
             default -> s.label();
         };

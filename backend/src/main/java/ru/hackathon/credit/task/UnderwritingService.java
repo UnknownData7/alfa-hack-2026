@@ -105,6 +105,7 @@ public class UnderwritingService {
     private final PricingCalculator pricing;
     private final AuditService audit;
     private final Json json;
+    private final io.micrometer.core.instrument.MeterRegistry metrics;
 
     public UnderwritingService(BankTaskRepository tasks, TaskService taskService, BankDecisionRepository decisions,
                                ApplicationRepository applications, CompanyRepository companyRepository,
@@ -115,7 +116,9 @@ public class UnderwritingService {
                                StatusHistoryRepository history, InfoRequestRepository infoRequests,
                                OfferRepository offerRepository, OfferService offers, ApplicationViews views,
                                StatusTransitionService transitions, CreditDecisionEngine engine,
-                               PricingCalculator pricing, AuditService audit, Json json) {
+                               PricingCalculator pricing, AuditService audit, Json json,
+                               io.micrometer.core.instrument.MeterRegistry metrics) {
+        this.metrics = metrics;
         this.tasks = tasks;
         this.taskService = taskService;
         this.decisions = decisions;
@@ -293,6 +296,7 @@ public class UnderwritingService {
         List<TaskCheck> checks = taskService.checks(taskId);
         String result = r.result();
         validateDecision(result, checks);
+        metrics.counter("credit.bank.decisions", "result", result).increment();
 
         Product product = products.get(app.getProductCode());
         String comment = r.comment() == null ? null : r.comment().trim();

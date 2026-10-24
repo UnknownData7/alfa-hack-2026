@@ -14,7 +14,9 @@ WORKDIR /app
 COPY --from=build /src/target/credit-backend.jar app.jar
 USER app
 EXPOSE 8080
-ENV JAVA_OPTS="-Xms128m -Xmx512m"
+ENV JAVA_OPTS="-Xms128m -Xmx512m" \
+    MANAGEMENT_PORT=8090
+EXPOSE 8090
 HEALTHCHECK --interval=10s --timeout=3s --start-period=60s --retries=6 \
-  CMD wget -qO- http://localhost:8080/actuator/health/readiness | grep -q '"UP"' || exit 1
+  CMD wget -qO- "http://localhost:${MANAGEMENT_PORT}/actuator/health/readiness" | grep -q '"UP"' || exit 1
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]

@@ -32,9 +32,9 @@ public class FeedController {
     }
 
     @PostMapping("/{id}/read")
-    @Operation(summary = "Отметить событие прочитанным")
-    public ResponseEntity<Void> markRead(@PathVariable Long id) {
-        feed.markRead(CurrentUser.get().requireCompanyId(), id);
+    @Operation(summary = "Убрать карточку из ленты: событие (event-N) или новость (news-N)")
+    public ResponseEntity<Void> markRead(@PathVariable String id) {
+        feed.dismiss(CurrentUser.get().requireCompanyId(), id);
         return ResponseEntity.noContent().build();
     }
 }

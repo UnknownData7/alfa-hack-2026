@@ -34,6 +34,9 @@ public class NewsItem {
 
     private int weight;
 
+    @Column(name = "published_at")
+    private java.time.Instant publishedAt;
+
     public Long getId() {
         return id;
     }
@@ -104,5 +107,13 @@ public class NewsItem {
 
     public void setWeight(int weight) {
         this.weight = weight;
+    }
+
+    public java.time.Instant getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void setPublishedAt(java.time.Instant publishedAt) {
+        this.publishedAt = publishedAt;
     }
 }

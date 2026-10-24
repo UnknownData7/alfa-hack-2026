@@ -29,7 +29,7 @@ public class ClientProfileController {
                                     String taxSystem, String accountMasked, int monthsWithBank,
                                     BigDecimal annualTurnover, BigDecimal avgMonthlyTurnover,
                                     BigDecimal turnoverGrowthPct, BigDecimal existingMonthlyObligations,
-                                    LocalDate financialsAsOf) {
+                                    LocalDate financialsAsOf, BigDecimal accountBalance) {
     }
 
     @GetMapping("/profile")
@@ -45,6 +45,6 @@ public class ClientProfileController {
                 c.getOgrn(), c.getOkvedCode(), c.getOkvedName(), c.getIndustryRisk(), c.getRegistrationDate(),
                 c.businessAgeMonths(LocalDate.now()), c.getEmployeesCount(), c.getTaxSystem(), c.getAccountMasked(),
                 c.getMonthsWithBank(), f.getAnnualTurnover12m(), f.getAvgMonthlyTurnover(), f.getTurnoverGrowthPct(),
-                f.getExistingMonthlyObligations(), f.getAsOf());
+                f.getExistingMonthlyObligations(), f.getAsOf(), c.getAccountBalance());
     }
 }

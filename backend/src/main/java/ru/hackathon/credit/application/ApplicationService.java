@@ -163,13 +163,10 @@ public class ApplicationService {
     }
 
     @Transactional
-    public SigningService.CodeIssued sendCode(CurrentUser user, Long id) {
-        return signing.sendCode(own(user, id), user.id());
-    }
-
-    @Transactional
-    public SigningService.ConfirmResult confirmCode(CurrentUser user, Long id, String code) {
-        return signing.confirm(own(user, id), code, user.id());
+    public ApplicationDetail sign(CurrentUser user, Long id, boolean termsAccepted) {
+        LoanApplication a = own(user, id);
+        signing.sign(a, termsAccepted, user.id());
+        return views.detail(a);
     }
 
     /** Заявка текущего клиента; чужая заявка неотличима от несуществующей. */

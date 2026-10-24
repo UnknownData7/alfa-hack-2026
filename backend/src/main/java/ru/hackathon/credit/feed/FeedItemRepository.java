@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FeedItemRepository extends JpaRepository<FeedItem, Long> {
 
-    List<FeedItem> findTop20ByCompanyIdOrderByCreatedAtDesc(Long companyId);
+    List<FeedItem> findTop20ByCompanyIdAndReadFalseOrderByCreatedAtDesc(Long companyId);
 
     Optional<FeedItem> findByIdAndCompanyId(Long id, Long companyId);
 }

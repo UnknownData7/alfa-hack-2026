@@ -50,6 +50,9 @@ public class Company {
     @Column(name = "months_with_bank")
     private int monthsWithBank;
 
+    @Column(name = "account_balance")
+    private java.math.BigDecimal accountBalance;
+
     public int businessAgeMonths(LocalDate today) {
         return (int) Period.between(registrationDate, today).toTotalMonths();
     }
@@ -156,5 +159,13 @@ public class Company {
 
     public void setMonthsWithBank(int monthsWithBank) {
         this.monthsWithBank = monthsWithBank;
+    }
+
+    public java.math.BigDecimal getAccountBalance() {
+        return accountBalance;
+    }
+
+    public void setAccountBalance(java.math.BigDecimal accountBalance) {
+        this.accountBalance = accountBalance;
     }
 }

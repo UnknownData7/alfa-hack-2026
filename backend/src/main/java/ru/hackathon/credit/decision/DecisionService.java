@@ -28,9 +28,12 @@ public class DecisionService {
     private final TaskService tasks;
     private final BankTaskRepository taskRepository;
     private final StatusTransitionService transitions;
+    private final io.micrometer.core.instrument.MeterRegistry metrics;
 
     public DecisionService(CreditDecisionEngine engine, OfferService offers, TaskService tasks,
-                           BankTaskRepository taskRepository, StatusTransitionService transitions) {
+                           BankTaskRepository taskRepository, StatusTransitionService transitions,
+                           io.micrometer.core.instrument.MeterRegistry metrics) {
+        this.metrics = metrics;
         this.engine = engine;
         this.offers = offers;
         this.tasks = tasks;
@@ -50,6 +53,7 @@ public class DecisionService {
                 product.getMinAmount().doubleValue(), run.amount(), run.termMonths(), run.monthlyObligations(),
                 run.avgMonthlyTurnover(), run.unavailableSources(), forceManual));
 
+        metrics.counter("credit.decisions", "outcome", d.outcome().name(), "reason", d.reasonCode()).increment();
         app.setDecisionReasonCode(d.reasonCode());
         app.setDecisionSummary(d.summary());
         switch (d.outcome()) {

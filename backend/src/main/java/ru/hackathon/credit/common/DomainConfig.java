@@ -15,13 +15,11 @@ import ru.hackathon.credit.decision.CreditDecisionEngine;
 import ru.hackathon.credit.integration.CompanyRegistryClient;
 import ru.hackathon.credit.integration.CreditBureauClient;
 import ru.hackathon.credit.integration.DisbursementProvider;
-import ru.hackathon.credit.integration.SigningProvider;
 import ru.hackathon.credit.integration.TaxServiceClient;
 import ru.hackathon.credit.integration.mock.MockCompanyRegistryClient;
 import ru.hackathon.credit.integration.mock.MockCreditBureauClient;
 import ru.hackathon.credit.integration.mock.MockDisbursementProvider;
 import ru.hackathon.credit.integration.mock.MockExternalData;
-import ru.hackathon.credit.integration.mock.MockSigningProvider;
 import ru.hackathon.credit.integration.mock.MockTaxServiceClient;
 import ru.hackathon.credit.pricing.PricingCalculator;
 import ru.hackathon.credit.product.ProductMatcher;
@@ -81,11 +79,6 @@ public class DomainConfig {
     }
 
     @Bean
-    public SigningProvider signingProvider() {
-        return new MockSigningProvider();
-    }
-
-    @Bean
     public DisbursementProvider disbursementProvider() {
         return new MockDisbursementProvider();
     }
@@ -98,6 +91,23 @@ public class DomainConfig {
         executor.setMaxPoolSize(8);
         executor.setQueueCapacity(200);
         executor.setThreadNamePrefix("pipeline-");
+        // Идентификатор корреляции запроса переходит в поток конвейера, чтобы обработку заявки можно было
+        // проследить по логам от отправки до решения
+        executor.setTaskDecorator(task -> {
+            java.util.Map<String, String> context = org.slf4j.MDC.getCopyOfContextMap();
+            return () -> {
+                if (context != null) {
+                    org.slf4j.MDC.setContextMap(context);
+                }
+                try {
+                    task.run();
+                } finally {
+                    org.slf4j.MDC.clear();
+                }
+            };
+        });
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(20);
         executor.initialize();
         return executor;
     }

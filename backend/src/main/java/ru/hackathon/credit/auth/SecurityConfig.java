@@ -41,6 +41,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                        // Метрики доступны только на служебном порту внутри сети Docker
+                        .requestMatchers("/actuator/prometheus").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/ping").permitAll()
                         .requestMatchers("/api/dev/**", "/error").permitAll()
                         .requestMatchers("/api/bank/**").hasRole(Role.UNDERWRITER.name())

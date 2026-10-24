@@ -623,8 +623,8 @@
                 "exec": [
                   "const a = pm.response.json();",
                   "pm.test('статус OFFER_MADE', () => pm.expect(a.status).to.eql('OFFER_MADE'));",
-                  "pm.test('грейд A', () => pm.expect(a.decision.grade).to.eql('A'));",
-                  "pm.test('предложение на запрошенных условиях', () => { pm.expect(a.offer.kind).to.eql('INITIAL'); pm.expect(Number(a.offer.amount)).to.eql(1200000); });"
+                  "pm.test('предложение на запрошенных условиях', () => { pm.expect(a.offer.kind).to.eql('INITIAL'); pm.expect(Number(a.offer.amount)).to.eql(1200000); });",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
                 ]
               }
             },
@@ -676,44 +676,7 @@
           ]
         },
         {
-          "name": "Получить код",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tokenRomashka}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/signing/send-code",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "applications",
-                "{{s1Id}}",
-                "signing",
-                "send-code"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('код показан в демо-режиме', () => pm.expect(pm.response.json().demoCode).to.match(/^\\d{6}$/));",
-                  "pm.collectionVariables.set('s1Code', pm.response.json().demoCode);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Неверный код: 422",
+          "name": "Подписание без согласия с условиями: 422",
           "request": {
             "method": "POST",
             "header": [
@@ -727,7 +690,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/signing/confirm",
+              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/sign",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -735,13 +698,12 @@
                 "api",
                 "applications",
                 "{{s1Id}}",
-                "signing",
-                "confirm"
+                "sign"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"000000\"\n}"
+              "raw": "{\n  \"termsAccepted\": false\n}"
             }
           },
           "event": [
@@ -757,7 +719,7 @@
           ]
         },
         {
-          "name": "Подтвердить код: выдача",
+          "name": "Подписать договор: выдача",
           "request": {
             "method": "POST",
             "header": [
@@ -771,7 +733,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/signing/confirm",
+              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/sign",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -779,13 +741,12 @@
                 "api",
                 "applications",
                 "{{s1Id}}",
-                "signing",
-                "confirm"
+                "sign"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"{{s1Code}}\"\n}"
+              "raw": "{\n  \"termsAccepted\": true\n}"
             }
           },
           "event": [
@@ -797,6 +758,76 @@
                   "const a = pm.response.json();",
                   "pm.test('ISSUED', () => pm.expect(a.status).to.eql('ISSUED'));",
                   "pm.test('выдача смоделирована', () => pm.expect(a.disbursement.simulated).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Остаток счёта после зачисления",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/client/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "client",
+                "profile"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('остаток счёта больше суммы кредита', () => pm.expect(Number(pm.response.json().accountBalance)).to.be.above(1200000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "История операций: зачисление",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/client/activity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "client",
+                "activity"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('первой идёт операция зачисления', () => pm.expect(pm.response.json()[0].type).to.eql('CREDIT'));",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
                 ]
               }
             }
@@ -829,7 +860,77 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('есть событие', () => pm.expect(JSON.stringify(pm.response.json())).to.include('Кредит выдан'));"
+                  "pm.test('есть событие', () => pm.expect(JSON.stringify(pm.response.json())).to.include('Кредит выдан'));",
+                  "pm.test('у карточек есть дата', () => pm.response.json().forEach(card => pm.expect(card.createdAt).to.be.a('string')));",
+                  "pm.collectionVariables.set('feedCardId', pm.response.json()[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Прочитано: карточка убирается",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed/{{feedCardId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed",
+                "{{feedCardId}}",
+                "read"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Лента без прочитанной карточки",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('карточки больше нет', () => pm.expect(pm.response.json().map(c => c.id)).to.not.include(pm.collectionVariables.get('feedCardId')));"
                 ]
               }
             }
@@ -1036,9 +1137,9 @@
                 "exec": [
                   "const a = pm.response.json();",
                   "pm.test('статус OFFER_MADE', () => pm.expect(a.status).to.eql('OFFER_MADE'));",
-                  "pm.test('грейд B', () => pm.expect(a.decision.grade).to.eql('B'));",
                   "pm.test('встречное на меньшую сумму', () => { pm.expect(a.offer.kind).to.eql('COUNTER'); pm.expect(Number(a.offer.amount)).to.be.below(1400000); });",
-                  "pm.test('объяснено, что изменилось', () => pm.expect(a.offer.changes.length).to.be.above(0));"
+                  "pm.test('объяснено, что изменилось', () => pm.expect(a.offer.changes.length).to.be.above(0));",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
                 ]
               }
             },
@@ -1254,8 +1355,8 @@
                 "exec": [
                   "const a = pm.response.json();",
                   "pm.test('статус DECLINED', () => pm.expect(a.status).to.eql('DECLINED'));",
-                  "pm.test('грейд D', () => pm.expect(a.decision.grade).to.eql('D'));",
-                  "pm.test('причины видны', () => pm.expect(a.decision.factors.length).to.be.above(0));"
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });",
+                  "pm.test('предложено подать новую заявку', () => pm.expect(a.nextStep.action).to.eql('NEW_APPLICATION'));"
                 ]
               }
             },
@@ -1471,7 +1572,7 @@
                 "exec": [
                   "const a = pm.response.json();",
                   "pm.test('статус MANUAL_REVIEW', () => pm.expect(a.status).to.eql('MANUAL_REVIEW'));",
-                  "pm.test('грейд C', () => pm.expect(a.decision.grade).to.eql('C'));"
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
                 ]
               }
             },
@@ -1736,7 +1837,8 @@
                 "exec": [
                   "const a = pm.response.json();",
                   "pm.test('NEED_INFO', () => pm.expect(a.status).to.eql('NEED_INFO'));",
-                  "pm.collectionVariables.set('s4Request', a.infoRequests.find(r => r.status === 'OPEN').id);"
+                  "pm.collectionVariables.set('s4Request', a.infoRequests.find(r => r.status === 'OPEN').id);",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
                 ]
               }
             }
@@ -1997,10 +2099,6 @@
       "value": ""
     },
     {
-      "key": "s1Code",
-      "value": ""
-    },
-    {
       "key": "s2Id",
       "value": ""
     },
@@ -2030,6 +2128,10 @@
     },
     {
       "key": "s4Repeat",
+      "value": ""
+    },
+    {
+      "key": "feedCardId",
       "value": ""
     }
   ]

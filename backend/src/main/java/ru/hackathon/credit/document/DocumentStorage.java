@@ -58,6 +58,10 @@ public class DocumentStorage {
             throw ApiException.badRequest("FILE_TYPE_NOT_ALLOWED",
                     "Допустимые форматы: PDF, JPG, PNG, DOCX, XLSX, CSV, TXT");
         }
+        if (!signatureMatches(ext, file)) {
+            throw ApiException.badRequest("FILE_CONTENT_MISMATCH",
+                    "Содержимое файла не соответствует его формату. Проверьте, что файл не повреждён");
+        }
         Path dir = root.resolve(String.valueOf(applicationId));
         Path target = dir.resolve(UUID.randomUUID() + "." + ext).normalize();
         if (!target.startsWith(root)) {
@@ -92,6 +96,43 @@ public class DocumentStorage {
         } catch (IOException e) {
             throw new IllegalStateException("Не удалось очистить хранилище", e);
         }
+    }
+
+    /** Сверка первых байтов файла с форматом по расширению: защищает от подмены типа файла. */
+    static boolean signatureMatches(String ext, MultipartFile file) {
+        byte[] head = new byte[8];
+        int read;
+        try (InputStream in = file.getInputStream()) {
+            read = in.readNBytes(head, 0, head.length);
+        } catch (IOException e) {
+            return false;
+        }
+        return signatureMatches(ext, head, read);
+    }
+
+    static boolean signatureMatches(String ext, byte[] head, int read) {
+        return switch (ext) {
+            case "pdf" -> startsWith(head, read, new int[] {0x25, 0x50, 0x44, 0x46});
+            case "png" -> startsWith(head, read, new int[] {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
+            case "jpg", "jpeg" -> startsWith(head, read, new int[] {0xFF, 0xD8, 0xFF});
+            // DOCX и XLSX являются ZIP-архивами
+            case "docx", "xlsx" -> startsWith(head, read, new int[] {0x50, 0x4B, 0x03, 0x04});
+            // Текстовые форматы не имеют сигнатуры; исполняемые файлы под видом текста отсекаются
+            case "csv", "txt" -> !startsWith(head, read, new int[] {0x4D, 0x5A}) && !startsWith(head, read, new int[] {0x7F, 0x45, 0x4C, 0x46});
+            default -> false;
+        };
+    }
+
+    private static boolean startsWith(byte[] head, int read, int[] signature) {
+        if (read < signature.length) {
+            return false;
+        }
+        for (int i = 0; i < signature.length; i++) {
+            if ((head[i] & 0xFF) != signature[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     static String safeName(String original) {

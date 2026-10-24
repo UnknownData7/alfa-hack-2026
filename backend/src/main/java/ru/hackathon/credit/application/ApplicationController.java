@@ -24,14 +24,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import ru.hackathon.credit.application.ApplicationDtos.AnswerRequest;
 import ru.hackathon.credit.application.ApplicationDtos.ApplicationDetail;
 import ru.hackathon.credit.application.ApplicationDtos.ApplicationSummary;
-import ru.hackathon.credit.application.ApplicationDtos.ConfirmCodeRequest;
 import ru.hackathon.credit.application.ApplicationDtos.DocumentView;
 import ru.hackathon.credit.application.ApplicationDtos.DraftRequest;
-import ru.hackathon.credit.application.ApplicationDtos.SendCodeResponse;
+import ru.hackathon.credit.application.ApplicationDtos.SignRequest;
 import ru.hackathon.credit.application.ApplicationDtos.SubmitResponse;
 import ru.hackathon.credit.auth.CurrentUser;
-import ru.hackathon.credit.common.ApiException;
-import ru.hackathon.credit.offer.SigningService;
 
 @RestController
 @RequestMapping("/api/applications")
@@ -40,10 +37,13 @@ public class ApplicationController {
 
     private final ApplicationService service;
     private final ApplicationPipeline pipeline;
+    private final io.micrometer.core.instrument.MeterRegistry metrics;
 
-    public ApplicationController(ApplicationService service, ApplicationPipeline pipeline) {
+    public ApplicationController(ApplicationService service, ApplicationPipeline pipeline,
+                                 io.micrometer.core.instrument.MeterRegistry metrics) {
         this.service = service;
         this.pipeline = pipeline;
+        this.metrics = metrics;
     }
 
     @GetMapping
@@ -74,6 +74,7 @@ public class ApplicationController {
     @Operation(summary = "Отправить заявку. Обработка идёт асинхронно, ответ 202")
     public ResponseEntity<SubmitResponse> submit(@PathVariable Long id) {
         LoanApplication app = service.submit(CurrentUser.get(), id);
+        metrics.counter("credit.applications.submitted", "product", app.getProductCode()).increment();
         pipeline.process(app.getId());
         return ResponseEntity.accepted().body(new SubmitResponse(app.getId(), app.getNumber(), app.getStatus(),
                 app.getStatus().label(), "Заявка отправлена. Статус обновится автоматически."));
@@ -116,28 +117,10 @@ public class ApplicationController {
         return service.declineOffer(CurrentUser.get(), id);
     }
 
-    @PostMapping("/{id}/signing/send-code")
-    @Operation(summary = "Получить код подтверждения. В демо-режиме код возвращается для показа в интерфейсе")
-    public SendCodeResponse sendCode(@PathVariable Long id) {
-        SigningService.CodeIssued issued = service.sendCode(CurrentUser.get(), id);
-        return new SendCodeResponse(issued.attemptsLeft(), issued.demoCode(),
-                "В промышленной версии код приходит через интернет-банк или сервис электронной подписи");
-    }
-
-    @PostMapping("/{id}/signing/confirm")
-    @Operation(summary = "Подтвердить код: договор подписывается, выполняется симуляция выдачи")
-    public ApplicationDetail confirm(@PathVariable Long id, @Valid @RequestBody ConfirmCodeRequest request) {
-        CurrentUser user = CurrentUser.get();
-        // Попытка фиксируется в отдельной транзакции, ошибка возвращается уже после её сохранения
-        SigningService.ConfirmResult result = service.confirmCode(user, id, request.code());
-        if (result.blocked()) {
-            throw ApiException.unprocessable("SIGNING_BLOCKED",
-                    "Код введён неверно три раза. Запросите новый код");
-        }
-        if (!result.confirmed()) {
-            throw ApiException.unprocessable("WRONG_CODE",
-                    "Неверный код. Осталось попыток: " + result.attemptsLeft());
-        }
-        return service.detail(user, id);
+    @PostMapping("/{id}/sign")
+    @Operation(summary = "Подписать договор: выполняется моделируемая выдача на расчётный счёт")
+    public ApplicationDetail sign(@PathVariable Long id, @RequestBody(required = false) SignRequest request) {
+        boolean accepted = request != null && Boolean.TRUE.equals(request.termsAccepted());
+        return service.sign(CurrentUser.get(), id, accepted);
     }
 }

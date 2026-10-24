@@ -28,13 +28,18 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuditService audit;
+    private final LoginAttemptService attempts;
+    private final io.micrometer.core.instrument.MeterRegistry metrics;
 
     public AuthController(AppUserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
-                          AuditService audit) {
+                          AuditService audit, LoginAttemptService attempts,
+                          io.micrometer.core.instrument.MeterRegistry metrics) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.audit = audit;
+        this.attempts = attempts;
+        this.metrics = metrics;
     }
 
     public record LoginRequest(@NotBlank(message = "Укажите логин") String login,
@@ -49,11 +54,24 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Вход по логину и паролю, возвращает JWT")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+    public LoginResponse login(@Valid @RequestBody LoginRequest request,
+                               jakarta.servlet.http.HttpServletRequest http) {
+        String address = ru.hackathon.credit.common.ClientAddress.of(http);
+        java.time.Duration wait = attempts.blockedFor(request.login(), address);
+        if (!wait.isZero()) {
+            long minutes = Math.max(1, (wait.toSeconds() + 59) / 60);
+            throw new ru.hackathon.credit.common.TooManyRequestsException(
+                    "Слишком много неудачных попыток входа. Повторите через " + minutes + " мин.", wait);
+        }
         AppUser user = users.findByLogin(request.login().trim())
                 .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS",
-                        "Неверный логин или пароль"));
+                .orElse(null);
+        if (user == null) {
+            attempts.recordFailure(request.login(), address);
+            metrics.counter("credit.auth.login.failures").increment();
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", "Неверный логин или пароль");
+        }
+        attempts.recordSuccess(request.login(), address);
         JwtService.IssuedToken token = jwtService.issue(user);
         audit.log(null, user.getRole() == Role.UNDERWRITER ? "BANK" : "CLIENT", user.getId(), "LOGIN", null);
         return new LoginResponse(token.token(), token.expiresAt(), toDto(user));
