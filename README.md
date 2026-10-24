@@ -177,6 +177,7 @@ npx newman run postman/collection.json -e postman/environment.json --working-dir
 | [`docs/PRODUCT_DECISIONS.md`](docs/PRODUCT_DECISIONS.md) | границы MVP, связь потребностей и функций |
 | [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) | допущения, описание моков |
 | [`docs/PRODUCTION_ROADMAP.md`](docs/PRODUCTION_ROADMAP.md) | путь к промышленной версии |
+| [`docs/AI_ASSISTANT_CONCEPT.md`](docs/AI_ASSISTANT_CONCEPT.md) | концепция помощника по подбору и оформлению кредита (черновик, не реализовано) |
 
 Обновить `docs/openapi.yaml` из запущенного приложения:
 
