@@ -8,3 +8,8 @@ where code = 'BUSINESS_OVERDRAFT';
 update product
 set max_term_months = 84
 where code = 'EQUIPMENT_GROWTH';
+
+-- Короткие однофразовые тексты ленты показываются без точки в конце, как остальные подписи интерфейса
+update news_catalog
+set body = rtrim(body, '.')
+where body like '%.' and body not like '%. %';

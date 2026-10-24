@@ -176,7 +176,7 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
             />
           </label>
         )}
-        <p className="muted small">Настройки сохраняются только в этом браузере.</p>
+        <p className="muted small">Настройки сохраняются только в этом браузере</p>
         <button type="button" className="btn btn-ghost btn-block" onClick={logout}>
           Выйти
         </button>

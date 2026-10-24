@@ -41,7 +41,7 @@ export function HistoryPage() {
       {activity.error && <ErrorBox error={activity.error} onRetry={() => activity.refetch()} />}
       {activity.data && activity.data.length === 0 && (
         <div className="card">
-          <Empty title="Операций пока нет">Здесь появятся зачисления кредитов и события по заявкам.</Empty>
+          <Empty title="Операций пока нет">Здесь появятся зачисления кредитов и события по заявкам</Empty>
         </div>
       )}
       {activity.data &&

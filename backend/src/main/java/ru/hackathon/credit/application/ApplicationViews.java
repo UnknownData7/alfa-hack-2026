@@ -118,7 +118,7 @@ public class ApplicationViews {
             changes.add(String.format(RU, "Сумма: %,.0f ₽ вместо %,.0f ₽", o.getAmount(), a.getRequestedAmount()));
         }
         if (a.getRequestedTermMonths() != o.getTermMonths()) {
-            changes.add("Срок: " + o.getTermMonths() + " мес. вместо " + a.getRequestedTermMonths() + " мес.");
+            changes.add("Срок: " + o.getTermMonths() + " мес. вместо " + a.getRequestedTermMonths() + " мес");
         }
         return changes;
     }
@@ -174,9 +174,9 @@ public class ApplicationViews {
     static NextStep nextStep(ApplicationStatus s) {
         return switch (s) {
             case DRAFT -> new NextStep("Заполните и отправьте заявку",
-                    "Черновик сохраняется автоматически, можно вернуться к нему позже.", "CONTINUE_DRAFT");
+                    "Черновик сохраняется автоматически, можно вернуться к нему позже", "CONTINUE_DRAFT");
             case SUBMITTED, SCORING -> new NextStep("Проверяем заявку",
-                    "Обычно это занимает меньше минуты, страница обновится сама.", "WAIT");
+                    "Обычно это занимает меньше минуты, страница обновится сама", "WAIT");
             case NEED_INFO -> new NextStep("Ответьте на запрос банка",
                     "Без этих данных банк не может продолжить рассмотрение. Ответьте ниже и при необходимости приложите документы.",
                     "ANSWER_REQUEST");
@@ -186,9 +186,9 @@ public class ApplicationViews {
                     "Банк готов выдать кредит. Проверьте условия и примите решение.", "REVIEW_OFFER");
             case SIGNING -> new NextStep("Подпишите договор",
                     "Проверьте условия договора и подтвердите подписание. Деньги поступят на расчётный счёт сразу.", "SIGN");
-            case ISSUED -> new NextStep("Кредит выдан", "Средства зачислены на расчётный счёт.", "NONE");
+            case ISSUED -> new NextStep("Кредит выдан", "Средства зачислены на расчётный счёт", "NONE");
             case DECLINED -> new NextStep("Банк не может одобрить заявку сейчас",
-                    "Вы можете подать новую заявку позже, например с другой суммой или сроком.", "NEW_APPLICATION");
+                    "Вы можете подать новую заявку позже, например с другой суммой или сроком", "NEW_APPLICATION");
             case CLOSED -> new NextStep("Заявка закрыта", "Вы отказались от предложения. Можно подать новую заявку.",
                     "NEW_APPLICATION");
         };

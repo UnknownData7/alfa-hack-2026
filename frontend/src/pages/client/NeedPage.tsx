@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../api/client';
 import { formatMoney, formatPct } from '../../api/format';
 import { ApplicationsList } from '../../components/ApplicationsList';
+import type { Recommendation } from '../../api/types';
 import { ErrorBox, Loader } from '../../components/ui';
 
 export function NeedPage() {
@@ -61,46 +62,66 @@ export function NeedPage() {
       </div>
 
       {recommend.error && <ErrorBox error={recommend.error} />}
-      {recommend.data && (
-        <div className="recommendations">
-          {recommend.data.map((r) => (
-            <div key={r.code} className={`card product-card ${r.available ? '' : 'unavailable'}`}>
-              <div className="product-head">
-                <h2>{r.name}</h2>
-                <span className={`badge ${r.available ? 'badge-ok' : 'badge-neutral'}`}>
-                  {r.available ? 'Подходит' : 'Не подходит'}
-                </span>
-              </div>
-              <div className="rate">
-                ставка от <strong>{formatPct(r.indicativeRatePct)}</strong> годовых
-              </div>
-              {r.fits.length > 0 && (
-                <ul className="reasons ok">
-                  {r.fits.map((f) => (
-                    <li key={f}>{f}</li>
-                  ))}
-                </ul>
-              )}
-              {r.limits.length > 0 && (
-                <ul className="reasons no">
-                  {r.limits.map((f) => (
-                    <li key={f}>{f}</li>
-                  ))}
-                </ul>
-              )}
-              {r.available && (
-                <button type="button" className="btn btn-primary" onClick={() => apply(r.code)}>
-                  Оформить заявку на {formatMoney(Number(amount))}
-                </button>
-              )}
-            </div>
-          ))}
-          <p className="muted small">
-            Ставка ориентировочная. Точные условия банк покажет в предложении после рассмотрения заявки.
-          </p>
-        </div>
-      )}
+      {recommend.data && <Recommendations items={recommend.data} amount={amount} onApply={apply} />}
       <ApplicationsList title="Мои заявки" />
+    </div>
+  );
+}
+
+/** Подходящие продукты. Неподходящие клиенту не показываются: вместо них подсказка, что изменить в запросе. */
+export function Recommendations({
+  items,
+  amount,
+  onApply,
+}: {
+  items: Recommendation[];
+  amount: string;
+  onApply: (code: string) => void;
+}) {
+  const available = items.filter((r) => r.available);
+  if (available.length === 0) {
+    // Подсказки берём у продуктов, которые подходят по цели: им не хватает только суммы, срока или оборота
+    const hints = Array.from(new Set(items.filter((r) => r.fits.some((f) => f.startsWith('подходит для цели'))).flatMap((r) => r.limits)));
+    return (
+      <div className="card no-match">
+        <h2>Под такие условия продуктов нет</h2>
+        {hints.length > 0 ? (
+          <>
+            <p className="muted">Попробуйте изменить запрос</p>
+            <ul className="reasons no">
+              {hints.map((h) => (
+                <li key={h}>{h}</li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="muted">Для этой цели у банка нет подходящего продукта, попробуйте выбрать другую цель</p>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="recommendations">
+      {available.map((r, i) => (
+        <div key={r.code} className={`card product-card ${i === 0 ? 'best' : ''}`}>
+          {i === 0 && available.length > 1 && <span className="best-flag">Лучше всего подходит</span>}
+          <h2>{r.name}</h2>
+          <div className="rate">
+            ставка от <strong>{formatPct(r.indicativeRatePct)}</strong> годовых
+          </div>
+          <ul className="reasons ok">
+            {r.fits.map((f) => (
+              <li key={f}>{f}</li>
+            ))}
+          </ul>
+          <button type="button" className="btn btn-primary" onClick={() => onApply(r.code)}>
+            Оформить на {formatMoney(Number(amount))}
+          </button>
+        </div>
+      ))}
+      <p className="muted small rate-note">
+        Ставка ориентировочная. Точные условия банк покажет в предложении после рассмотрения заявки
+      </p>
     </div>
   );
 }

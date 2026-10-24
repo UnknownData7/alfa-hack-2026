@@ -67,16 +67,23 @@ export function TaskPage() {
       <div className="card">
         <div className="app-head">
           <div>
-            <div className="muted small">
-              Задача №{t.id} · приоритет {t.priority} · {t.statusLabel}
-              {t.repeat ? ' · повторная после ответа клиента' : ''}
+            <div className="meta muted small">
+              <span>Задача №{t.id}</span>
+              <span>Приоритет {t.priority}</span>
+              <span>{t.statusLabel}</span>
+              {t.repeat && <span>Повторная после ответа клиента</span>}
             </div>
             <h1>
               {app.number}: {card.company.name}
             </h1>
-            <div className="muted small">
-              {app.productName} · {formatMoney(app.requestedAmount)} на {formatMonths(app.requestedTermMonths)} · SLA до{' '}
-              <span className={t.overdue ? 'overdue' : ''}>{formatDateTime(t.slaDueAt)}</span>
+            <div className="meta muted small">
+              <span>{app.productName}</span>
+              <span>
+                {formatMoney(app.requestedAmount)} на {formatMonths(app.requestedTermMonths)}
+              </span>
+              <span>
+                SLA до <span className={t.overdue ? 'overdue' : ''}>{formatDateTime(t.slaDueAt)}</span>
+              </span>
             </div>
           </div>
           <div className="head-actions">
@@ -232,9 +239,10 @@ function DocumentsTab({ card }: { card: TaskCard }) {
               {d.fileName}
             </button>
             {d.newForBank && <span className="badge badge-accent small-badge">новое</span>}
-            <span className="muted small">
-              {' '}
-              · {docTypeLabel[d.docType] ?? d.docType} · {formatSize(d.sizeBytes)} · {formatDateTime(d.uploadedAt)}
+            <span className="meta muted small">
+              <span>{docTypeLabel[d.docType] ?? d.docType}</span>
+              <span>{formatSize(d.sizeBytes)}</span>
+              <span>{formatDateTime(d.uploadedAt)}</span>
             </span>
           </li>
         ))}
@@ -255,7 +263,7 @@ function ScoringTab({ card }: { card: TaskCard }) {
             Запуск {r.runNo} ({r.trigger === 'RECALC' ? 'пересчёт' : 'первичный'}): <strong>{r.totalScore}</strong> баллов, грейд{' '}
             <strong>{r.grade}</strong>, нагрузка {formatPct(r.paymentLoad * 100)}
             {r.hardStop && <span className="badge badge-danger small-badge">жёсткий стоп</span>}
-            <span className="muted small"> · {formatDateTime(r.createdAt)}</span>
+            <span className="muted small run-date">{formatDateTime(r.createdAt)}</span>
           </summary>
           {r.hardStopReason && <div className="alert alert-error">{r.hardStopReason}</div>}
           <FactorTable factors={r.factors} />
@@ -349,7 +357,7 @@ function HistoryTab({ card }: { card: TaskCard }) {
           <ul className="plain small">
             {card.decisions.map((d, i) => (
               <li key={i}>
-                {formatDateTime(d.createdAt)} · {d.decidedByName}: <strong>{d.resultLabel}</strong>
+                <span className="muted">{formatDateTime(d.createdAt)}</span> {d.decidedByName}: <strong>{d.resultLabel}</strong>
                 {d.comment ? ` (${d.comment})` : ''}
               </li>
             ))}
@@ -388,8 +396,8 @@ function ActionPanel({
         <h2>Действия</h2>
         <p className="muted small">
           {card.task.status === 'DONE'
-            ? 'Задача завершена.'
-            : 'Возьмите задачу в работу, чтобы заполнить проверки, пересчитать скоринг и принять решение.'}
+            ? 'Задача завершена'
+            : 'Возьмите задачу в работу, чтобы заполнить проверки, пересчитать скоринг и принять решение'}
         </p>
       </aside>
     );
@@ -399,15 +407,15 @@ function ActionPanel({
   const hint = card.checks.some((c) => c.status === 'PENDING')
     ? 'Заполните все проверки, чтобы стали доступны решения. Отложить можно сейчас.'
     : card.checks.some((c) => c.status === 'NEGATIVE')
-      ? 'Есть отрицательная проверка: доступны отказ и встречное предложение.'
+      ? 'Есть отрицательная проверка: доступны отказ и встречное предложение'
       : card.checks.some((c) => c.status === 'NEEDS_INFO')
-        ? 'Есть проверка «нужны данные»: запросите их у клиента.'
+        ? 'Есть проверка «нужны данные»: запросите их у клиента'
         : '';
 
   return (
     <aside className="card action-panel">
       <h2>Пересчёт</h2>
-      <p className="muted small">Укажите подтверждённые данные, система пересчитает скоринг и условия.</p>
+      <p className="muted small">Укажите подтверждённые данные, система пересчитает скоринг и условия</p>
       <label className="field">
         <span>Подтверждённый годовой оборот, ₽</span>
         <input type="number" value={turnover} onChange={(e) => setTurnover(e.target.value)} placeholder={String(card.company.annualTurnover)} />

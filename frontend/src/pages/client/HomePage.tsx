@@ -52,7 +52,7 @@ export function HomePage() {
         <Link to="/benefits" className="banner banner-referral">
           <div className="banner-copy">
             <h2>Деньги за рекомендации</h2>
-            <p>5 000 ₽ за каждого знакомого предпринимателя, который откроет счёт по вашей ссылке.</p>
+            <p>5 000 ₽ за каждого знакомого предпринимателя, который откроет счёт по вашей ссылке</p>
             <span className="banner-cta">Пригласить</span>
           </div>
           <span className="art art-gift" aria-hidden>

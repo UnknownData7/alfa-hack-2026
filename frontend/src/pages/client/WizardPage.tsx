@@ -289,7 +289,7 @@ export function WizardPage() {
               />
             </label>
           )}
-          {!product?.requiresCollateral && <p className="muted">Для этого продукта залог не нужен.</p>}
+          {!product?.requiresCollateral && <p className="muted">Для этого продукта залог не нужен</p>}
         </div>
       )}
 

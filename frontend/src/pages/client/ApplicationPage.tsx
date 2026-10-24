@@ -88,7 +88,7 @@ export function ApplicationPage() {
               ['Дата и время', formatDateTime(a.disbursement.executedAt)],
             ]}
           />
-          <p className="muted small">В прототипе зачисление смоделировано, реальных денежных операций нет.</p>
+          <p className="muted small">В прототипе зачисление смоделировано, реальных денежных операций нет</p>
         </div>
       )}
 
@@ -278,7 +278,7 @@ export function OfferBlock({ application, onDone }: { application: ApplicationDe
         </div>
         <div>
           <span className="muted small">
-            <Term hint="Одинаковый платёж каждый месяц: часть идёт на проценты, часть на погашение долга">Ежемесячный платёж</Term>
+            <Term hint="Одинаковый платёж каждый месяц: часть идёт на проценты, часть на погашение долга">Платёж в месяц</Term>
           </span>
           <strong>{formatMoney(offer.monthlyPayment)}</strong>
         </div>

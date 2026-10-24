@@ -22,7 +22,7 @@ export function ApplicationsList({ title, limit }: { title: string; limit?: numb
       {applications.isLoading && <Loader />}
       {applications.error && <ErrorBox error={applications.error} onRetry={() => applications.refetch()} />}
       {items && items.length === 0 && (
-        <Empty title="Заявок пока нет">Подберите продукт в разделе «Кредиты», это займёт пару минут.</Empty>
+        <Empty title="Заявок пока нет">Подберите продукт в разделе «Кредиты», это займёт пару минут</Empty>
       )}
       {items && items.length > 0 && (
         <ul className="app-list">

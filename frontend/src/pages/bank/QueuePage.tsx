@@ -31,7 +31,7 @@ export function QueuePage() {
         </button>
       </div>
       <p className="muted small">
-        Задачи выдаются по приоритету (1 — самый высокий), затем по времени создания. В работе может быть только одна
+        Задачи выдаются по приоритету (1 означает самый высокий), затем по времени создания. В работе может быть только одна
         задача; повторные задачи после ответа клиента возвращаются тому же сотруднику.
       </p>
       {takeNext.error && <ErrorBox error={takeNext.error} />}
@@ -72,8 +72,9 @@ export function QueuePage() {
                 <td>
                   <strong>{t.applicationNumber}</strong>
                   {t.repeat && <span className="badge badge-warn small-badge">повторная</span>}
-                  <div className="muted small">
-                    грейд {t.grade ?? '—'} · <StatusBadge status={t.applicationStatus} label={statusLabel[t.applicationStatus]} />
+                  <div className="meta muted small">
+                    <span>Грейд {t.grade ?? 'нет'}</span>
+                    <StatusBadge status={t.applicationStatus} label={statusLabel[t.applicationStatus]} />
                   </div>
                 </td>
                 <td>{t.companyName}</td>
