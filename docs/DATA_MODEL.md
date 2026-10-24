@@ -76,7 +76,7 @@ erDiagram
 | `app_user` | пользователи и роли | login, password_hash, role, company_id |
 | `company` | профиль компании-клиента | inn, legal_form (`IP`/`OOO`), okved_code, industry_risk, registration_date, employees_count, tax_system, account_masked, account_balance (остаток синтетического счёта, версия 2), months_with_bank |
 | `company_financials` | синтетический снимок «по данным банка» | annual_turnover_12m, avg_monthly_turnover, turnover_growth_pct, existing_monthly_obligations |
-| `product` | каталог продуктов | code, purposes (коды целей через запятую), spread_pct, min/max сумма и срок, requires_collateral, routing, auto_limit_amount, min_avg_monthly_turnover |
+| `product` | каталог продуктов | code, purposes (коды целей через запятую), spread_pct, min/max сумма и срок, requires_collateral, routing, auto_limit_amount, min_avg_monthly_turnover, max_turnover_share (лимит как доля среднего месячного оборота, у овердрафта 0,5) |
 | `loan_application` | заявка | number, product_code, purpose, requested_amount, requested_term_months, monthly_obligations_declared, collateral_description, согласия, status, decision_reason_code, decision_summary, current_offer_id, parent_application_id (новая заявка после отказа), version |
 | `application_document` | документы заявки | doc_type, file_name, storage_path, is_new_for_bank |
 | `external_check_result` | ответы моков (реестр, БКИ, ФНС) | source, payload (JSONB), status |

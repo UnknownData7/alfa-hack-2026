@@ -35,7 +35,7 @@ app:
     secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}
     ttl-minutes: ${JWT_TTL_MINUTES:60}
   pricing:
-    key-rate-percent: ${KEY_RATE_PERCENT:15.0}
+    key-rate-percent: ${KEY_RATE_PERCENT:14.0}
   pipeline:
     step-delay-ms: ${PIPELINE_STEP_DELAY_MS:800}
   mocks:

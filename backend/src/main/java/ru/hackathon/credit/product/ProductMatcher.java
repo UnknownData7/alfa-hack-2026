@@ -15,7 +15,7 @@ public class ProductMatcher {
 
     public record ProductTerms(String code, String name, Set<Purpose> purposes, double minAmount, double maxAmount,
                                int minTerm, int maxTerm, double spreadPct, boolean requiresCollateral,
-                               Double minAvgMonthlyTurnover) {
+                               Double minAvgMonthlyTurnover, Double maxTurnoverShare) {
     }
 
     public record Need(Purpose purpose, double amount, int termMonths) {
@@ -66,6 +66,17 @@ public class ProductMatcher {
                 fits.add("ваш оборот соответствует условию продукта");
             }
 
+            if (p.maxTurnoverShare() != null) {
+                double limit = maxAmountByTurnover(p.maxTurnoverShare(), avgMonthlyTurnover);
+                if (need.amount() > limit) {
+                    limits.add(String.format(RU, "лимит не больше %.0f%% среднего месячного оборота, для вас до %,.0f ₽",
+                            p.maxTurnoverShare() * 100, limit));
+                } else {
+                    fits.add(String.format(RU, "лимит в пределах %.0f%% вашего месячного оборота",
+                            p.maxTurnoverShare() * 100));
+                }
+            }
+
             if (p.requiresCollateral()) {
                 fits.add("нужен залог, решение принимает специалист банка");
             }
@@ -76,5 +87,10 @@ public class ProductMatcher {
         result.sort(Comparator.comparing(Recommendation::available).reversed()
                 .thenComparing(Comparator.comparingInt(Recommendation::relevance).reversed()));
         return result;
+    }
+
+    /** Максимальная сумма по обороту, округлённая вниз до тысячи рублей. */
+    public static double maxAmountByTurnover(double share, double avgMonthlyTurnover) {
+        return Math.floor(share * avgMonthlyTurnover / 1000.0) * 1000.0;
     }
 }

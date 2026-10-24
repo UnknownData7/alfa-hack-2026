@@ -64,7 +64,7 @@ public class ApplicationService {
     public ApplicationDetail create(CurrentUser user, DraftRequest r) {
         Long companyId = user.requireCompanyId();
         Product product = products.get(r.productCode());
-        products.validateTerms(product, r.amount(), r.termMonths());
+        products.validateForCompany(product, r.amount(), r.termMonths(), companyId);
         if (r.parentApplicationId() != null) {
             LoanApplication parent = own(user, r.parentApplicationId());
             if (!parent.getStatus().isFinal()) {
@@ -88,7 +88,7 @@ public class ApplicationService {
         LoanApplication a = own(user, id);
         StatusTransitionService.requireStatus(a, ApplicationStatus.DRAFT);
         Product product = products.get(r.productCode());
-        products.validateTerms(product, r.amount(), r.termMonths());
+        products.validateForCompany(product, r.amount(), r.termMonths(), a.getCompanyId());
         apply(a, r);
         return views.detail(applications.saveAndFlush(a));
     }
@@ -102,7 +102,8 @@ public class ApplicationService {
             throw ApiException.unprocessable("CONSENTS_REQUIRED",
                     "Чтобы отправить заявку, нужно дать согласие на обработку данных и на запрос в бюро кредитных историй");
         }
-        products.validateTerms(products.get(a.getProductCode()), a.getRequestedAmount(), a.getRequestedTermMonths());
+        products.validateForCompany(products.get(a.getProductCode()), a.getRequestedAmount(),
+                a.getRequestedTermMonths(), a.getCompanyId());
         a.setSubmittedAt(Instant.now());
         return transitions.transition(a, ApplicationStatus.SUBMITTED, ActorType.CLIENT, user.id(), "Заявка отправлена");
     }

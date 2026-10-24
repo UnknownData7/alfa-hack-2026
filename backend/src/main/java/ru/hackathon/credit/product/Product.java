@@ -51,6 +51,9 @@ public class Product {
     @Column(name = "min_avg_monthly_turnover")
     private BigDecimal minAvgMonthlyTurnover;
 
+    @Column(name = "max_turnover_share")
+    private BigDecimal maxTurnoverShare;
+
     @Column(name = "sort_order")
     private int sortOrder;
 
@@ -159,6 +162,14 @@ public class Product {
 
     public void setAutoLimitAmount(BigDecimal autoLimitAmount) {
         this.autoLimitAmount = autoLimitAmount;
+    }
+
+    public BigDecimal getMaxTurnoverShare() {
+        return maxTurnoverShare;
+    }
+
+    public void setMaxTurnoverShare(BigDecimal maxTurnoverShare) {
+        this.maxTurnoverShare = maxTurnoverShare;
     }
 
     public BigDecimal getMinAvgMonthlyTurnover() {

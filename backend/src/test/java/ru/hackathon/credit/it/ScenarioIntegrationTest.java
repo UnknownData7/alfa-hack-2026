@@ -82,7 +82,7 @@ class ScenarioIntegrationTest extends IntegrationTestBase {
         assertEquals("B", lastRun(id).getGrade());
         assertNoInternalScoring(app);
         assertEquals("COUNTER", app.get("offer").get("kind").asText());
-        assertEquals(0, app.get("offer").get("amount").decimalValue().compareTo(new java.math.BigDecimal("840000")));
+        assertEquals(0, app.get("offer").get("amount").decimalValue().compareTo(new java.math.BigDecimal("850000")));
         assertFalse(app.get("offer").get("changes").isEmpty());
     }
 
@@ -207,11 +207,28 @@ class ScenarioIntegrationTest extends IntegrationTestBase {
     void missingDocumentsLeadToNeedInfoAndRepeatedSubmitIsRejected() throws Exception {
         String token = login("orlova");
         long id = postJson(token, "/api/applications", Map.of("productCode", "BUSINESS_OVERDRAFT",
-                "purpose", "CASH_GAP", "amount", 500_000, "termMonths", 12, "consentDataProcessing", true,
+                "purpose", "CASH_GAP", "amount", 300_000, "termMonths", 12, "consentDataProcessing", true,
                 "consentCreditBureau", true), 201).get("id").asLong();
         postJson(token, "/api/applications/" + id + "/submit", null, 202);
         postJson(token, "/api/applications/" + id + "/submit", null, 409);
         JsonNode app = awaitStatus(token, id, "NEED_INFO");
         assertEquals("SYSTEM", app.get("infoRequests").get(0).get("source").asText());
+    }
+
+    @Test
+    void overdraftLimitIsCappedByHalfOfMonthlyTurnover() throws Exception {
+        String token = login("orlova");
+        JsonNode error = postJson(token, "/api/applications", Map.of("productCode", "BUSINESS_OVERDRAFT",
+                "purpose", "CASH_GAP", "amount", 500_000, "termMonths", 12, "consentDataProcessing", true,
+                "consentCreditBureau", true), 422);
+        assertEquals("TURNOVER_LIMIT_EXCEEDED", error.get("code").asText());
+
+        JsonNode recommendations = postJson(token, "/api/products/recommend",
+                Map.of("purpose", "CASH_GAP", "amount", 500_000, "termMonths", 12), 200);
+        for (JsonNode r : recommendations) {
+            if (r.get("code").asText().equals("BUSINESS_OVERDRAFT")) {
+                assertFalse(r.get("available").asBoolean());
+            }
+        }
     }
 }

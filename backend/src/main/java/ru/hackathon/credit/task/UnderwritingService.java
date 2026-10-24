@@ -263,7 +263,7 @@ public class UnderwritingService {
         Product product = products.get(app.getProductCode());
         BigDecimal amount = r.amount() != null ? r.amount() : app.getRequestedAmount();
         int term = r.termMonths() != null ? r.termMonths() : app.getRequestedTermMonths();
-        products.validateTerms(product, amount, term);
+        products.validateForCompany(product, amount, term, app.getCompanyId());
 
         ScoringService.Run run = scoring.run(app, product, ScoringService.RECALC,
                 new ScoringService.Overrides(r.confirmedAnnualTurnover(), r.amount(), r.termMonths()), "BANK:" + userId);
@@ -331,7 +331,8 @@ public class UnderwritingService {
                 if (r.counterOffer() == null) {
                     throw ApiException.unprocessable("COUNTER_OFFER_REQUIRED", "Укажите сумму и срок встречного предложения");
                 }
-                products.validateTerms(product, r.counterOffer().amount(), r.counterOffer().termMonths());
+                products.validateForCompany(product, r.counterOffer().amount(), r.counterOffer().termMonths(),
+                        app.getCompanyId());
                 ScoringRun run = latestRun(app);
                 double amount = r.counterOffer().amount().doubleValue();
                 int term = r.counterOffer().termMonths();

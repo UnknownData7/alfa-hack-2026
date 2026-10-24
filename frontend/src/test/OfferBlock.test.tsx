@@ -27,7 +27,7 @@ function application(status: ApplicationDetail['status']): ApplicationDetail {
     offer: {
       id: 5,
       kind: 'COUNTER',
-      amount: 840000,
+      amount: 850000,
       termMonths: 6,
       ratePct: 20.5,
       monthlyPayment: 148489,
@@ -35,7 +35,7 @@ function application(status: ApplicationDetail['status']): ApplicationDetail {
       overpayment: 50934,
       status: 'ACTIVE',
       summary: 'Банк готов выдать кредит на других условиях',
-      changes: ['Сумма снижена с 1 400 000 до 840 000 ₽'],
+      changes: ['Сумма: 850 000 ₽ вместо 1 400 000 ₽'],
       createdAt: '2026-10-23T10:01:00Z',
     },
     history: [],
@@ -48,7 +48,7 @@ describe('OfferBlock', () => {
   it('показывает встречное предложение с изменениями и кнопками', () => {
     render(<OfferBlock application={application('OFFER_MADE')} onDone={() => {}} />);
     expect(screen.getByText('Встречное предложение банка')).toBeInTheDocument();
-    expect(screen.getByText('Сумма снижена с 1 400 000 до 840 000 ₽')).toBeInTheDocument();
+    expect(screen.getByText('Сумма: 850 000 ₽ вместо 1 400 000 ₽')).toBeInTheDocument();
     // Клиент не видит внутреннюю оценку банка
     expect(screen.queryByText(/грейд|балл|скоринг/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Принять и перейти к подписанию' })).toBeEnabled();

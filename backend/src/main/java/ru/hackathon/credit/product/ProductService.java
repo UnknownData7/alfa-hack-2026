@@ -6,16 +6,19 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import ru.hackathon.credit.common.ApiException;
+import ru.hackathon.credit.company.CompanyService;
 
 @Service
 public class ProductService {
 
     private final ProductRepository products;
     private final ProductMatcher matcher;
+    private final CompanyService companies;
 
-    public ProductService(ProductRepository products, ProductMatcher matcher) {
+    public ProductService(ProductRepository products, ProductMatcher matcher, CompanyService companies) {
         this.products = products;
         this.matcher = matcher;
+        this.companies = companies;
     }
 
     public List<Product> all() {
@@ -45,10 +48,26 @@ public class ProductService {
         }
     }
 
+    /** Границы продукта и лимит по обороту компании (для овердрафта не больше половины среднего месячного оборота). */
+    public void validateForCompany(Product p, BigDecimal amount, int termMonths, Long companyId) {
+        validateTerms(p, amount, termMonths);
+        if (p.getMaxTurnoverShare() != null) {
+            double limit = ProductMatcher.maxAmountByTurnover(p.getMaxTurnoverShare().doubleValue(),
+                    companies.financials(companyId).getAvgMonthlyTurnover().doubleValue());
+            if (amount.doubleValue() > limit) {
+                throw ApiException.unprocessable("TURNOVER_LIMIT_EXCEEDED", String.format(
+                        java.util.Locale.forLanguageTag("ru"),
+                        "Лимит продукта «%s» не больше %.0f%% среднего месячного оборота: для вашей компании до %,.0f ₽",
+                        p.getName(), p.getMaxTurnoverShare().doubleValue() * 100, limit));
+            }
+        }
+    }
+
     static ProductMatcher.ProductTerms terms(Product p) {
         return new ProductMatcher.ProductTerms(p.getCode(), p.getName(), p.purposeSet(),
                 p.getMinAmount().doubleValue(), p.getMaxAmount().doubleValue(), p.getMinTermMonths(),
                 p.getMaxTermMonths(), p.getSpreadPct().doubleValue(), p.isRequiresCollateral(),
-                p.getMinAvgMonthlyTurnover() == null ? null : p.getMinAvgMonthlyTurnover().doubleValue());
+                p.getMinAvgMonthlyTurnover() == null ? null : p.getMinAvgMonthlyTurnover().doubleValue(),
+                p.getMaxTurnoverShare() == null ? null : p.getMaxTurnoverShare().doubleValue());
     }
 }
