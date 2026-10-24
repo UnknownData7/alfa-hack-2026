@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { AssistantWidget } from '../assistant/AssistantWidget';
 import { useAuth } from '../auth/AuthContext';
 import { useSettings, type ThemeChoice } from '../settings/SettingsContext';
 import { CloseIcon, EyeIcon, EyeOffIcon, GearIcon } from './icons';
@@ -101,6 +102,7 @@ export function Layout({ children }: { children: ReactNode }) {
         Прототип для хакатона. Все компании, счета и суммы вымышленные, подписание и зачисление смоделированы.
       </footer>
       {settingsOpen && <SettingsDrawer onClose={() => setSettingsOpen(false)} />}
+      {isClient && <AssistantWidget />}
     </div>
   );
 }

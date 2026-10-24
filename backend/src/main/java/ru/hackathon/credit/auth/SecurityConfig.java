@@ -47,7 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/dev/**", "/error").permitAll()
                         .requestMatchers("/api/bank/**").hasRole(Role.UNDERWRITER.name())
                         .requestMatchers("/api/client/**", "/api/applications/**", "/api/feed/**",
-                                "/api/products/recommend").hasRole(Role.CLIENT.name())
+                                "/api/products/recommend", "/api/assistant/**").hasRole(Role.CLIENT.name())
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(rs -> rs
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))

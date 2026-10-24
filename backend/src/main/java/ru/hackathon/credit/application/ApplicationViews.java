@@ -171,7 +171,8 @@ public class ApplicationViews {
         };
     }
 
-    static NextStep nextStep(ApplicationStatus s) {
+    /** Следующий шаг клиента; тот же текст показывает помощник на странице заявки. */
+    public static NextStep nextStep(ApplicationStatus s) {
         return switch (s) {
             case DRAFT -> new NextStep("Заполните и отправьте заявку",
                     "Черновик сохраняется автоматически, можно вернуться к нему позже", "CONTINUE_DRAFT");

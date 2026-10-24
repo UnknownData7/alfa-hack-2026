@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../../api/client';
 import { docTypeLabel, formatMoney, formatMonths, formatSize } from '../../api/format';
 import type { ApplicationDetail, DraftRequest, Product } from '../../api/types';
+import { useAssistant, useAssistantPage } from '../../assistant/AssistantContext';
 import { ErrorBox, KeyValue, Loader, Term } from '../../components/ui';
 
 const STEPS = ['Условия', 'Данные', 'Документы', 'Проверка и отправка'];
@@ -77,6 +78,14 @@ export function WizardPage() {
   const [busy, setBusy] = useState(false);
   const [docType, setDocType] = useState('BANK_STATEMENT');
   const loaded = useRef(false);
+  const assistant = useAssistant();
+  useAssistantPage({
+    wizardStep: step,
+    purpose: form.purpose,
+    amount: Number(form.amount) || undefined,
+    termMonths: Number(form.termMonths) || undefined,
+    productCode: form.productCode,
+  });
 
   // Загрузка существующего черновика или предзаполнение из прошлой заявки
   useEffect(() => {
@@ -216,6 +225,13 @@ export function WizardPage() {
           </li>
         ))}
       </ol>
+      {assistant.enabled && (
+        <p className="wizard-help">
+          <button type="button" className="link small" onClick={() => assistant.openPanel('wizard', 'INLINE_WIZARD')}>
+            Что нужно на этом шаге?
+          </button>
+        </p>
+      )}
 
       {step === 0 && (
         <div className="form-grid">
@@ -240,7 +256,7 @@ export function WizardPage() {
               ))}
             </select>
           </label>
-          <label className="field">
+          <label className="field" data-assist="wizard-amount">
             <span>Сумма, ₽</span>
             <input type="number" value={form.amount} onChange={(e) => update('amount', e.target.value)} />
             {product && (
@@ -249,7 +265,7 @@ export function WizardPage() {
               </small>
             )}
           </label>
-          <label className="field">
+          <label className="field" data-assist="wizard-term">
             <span>Срок, месяцев</span>
             <input type="number" value={form.termMonths} onChange={(e) => update('termMonths', e.target.value)} />
             {product && (
@@ -263,7 +279,7 @@ export function WizardPage() {
 
       {step === 1 && (
         <div className="form-grid">
-          <label className="field">
+          <label className="field" data-assist="wizard-obligations">
             <span>
               <Term hint="Сколько в месяц компания уже платит по другим кредитам и лизингу">Ежемесячные платежи по кредитам</Term>, ₽
             </span>
@@ -277,7 +293,7 @@ export function WizardPage() {
             <small className="muted">{obligationsHint}. Если сумма другая, укажите её.</small>
           </label>
           {product?.requiresCollateral && (
-            <label className="field wide">
+            <label className="field wide" data-assist="wizard-collateral">
               <span>
                 <Term hint="Имущество, которое обеспечивает кредит: например, покупаемое оборудование или транспорт">Залог</Term>
               </span>
@@ -299,7 +315,7 @@ export function WizardPage() {
             Приложите выписку по расчётному счёту за последние 12 месяцев или другой документ, подтверждающий обороты. Так
             банк быстрее примет решение.
           </p>
-          <div className="upload-row">
+          <div className="upload-row" data-assist="wizard-documents">
             <select value={docType} onChange={(e) => setDocType(e.target.value)}>
               {Object.entries(docTypeLabel).map(([k, v]) => (
                 <option key={k} value={k}>
@@ -353,6 +369,7 @@ export function WizardPage() {
               ['Документы', `${draft?.documents.length ?? 0} шт.`],
             ]}
           />
+          <div className="stack" data-assist="wizard-consents">
           <label className="check">
             <input
               type="checkbox"
@@ -369,6 +386,7 @@ export function WizardPage() {
             />
             Согласен на запрос кредитной истории в бюро кредитных историй
           </label>
+          </div>
         </div>
       )}
 

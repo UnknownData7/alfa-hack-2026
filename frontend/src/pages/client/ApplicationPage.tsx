@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api, downloadFile } from '../../api/client';
 import { docTypeLabel, formatDateTime, formatMoney, formatMonths, formatPct, formatSize } from '../../api/format';
 import type { ApplicationDetail, InfoRequest } from '../../api/types';
+import { useAssistantPage } from '../../assistant/AssistantContext';
 import { StatusTracker } from '../../components/StatusTracker';
 import { ErrorBox, KeyValue, Loader, Money, StatusBadge, Term } from '../../components/ui';
 
@@ -18,6 +19,8 @@ export function ApplicationPage() {
     // Статус меняется асинхронно и действиями банка, поэтому страница опрашивает сервер
     refetchInterval: (q) => (q.state.data && !ACTIVE_STATUSES.has(q.state.data.status) ? false : 3000),
   });
+
+  useAssistantPage({ applicationStatus: query.data?.status, offerKind: query.data?.offer?.kind });
 
   function refresh(updated?: ApplicationDetail) {
     if (updated) {
@@ -196,7 +199,7 @@ function AnswerForm({
   }
 
   return (
-    <div className="card attention">
+    <div className="card attention" data-assist="info-request">
       <h2>{request.source === 'BANK' ? 'Вопрос от специалиста банка' : 'Нужно дополнить заявку'}</h2>
       <p className="request-text">{request.text}</p>
       <label className="field">
@@ -258,7 +261,7 @@ export function OfferBlock({ application, onDone }: { application: ApplicationDe
   }
 
   return (
-    <div className="card offer">
+    <div className="card offer" data-assist="offer">
       <div className="offer-head">
         <h2>{offer.kind === 'COUNTER' ? 'Встречное предложение банка' : 'Предложение банка'}</h2>
         {offer.kind === 'COUNTER' && <span className="badge badge-warn">условия изменены</span>}
@@ -341,7 +344,7 @@ export function SigningBlock({
   }
 
   return (
-    <div className="card signing">
+    <div className="card signing" data-assist="signing">
       <h2>Подписание договора</h2>
       {offer && (
         <p>

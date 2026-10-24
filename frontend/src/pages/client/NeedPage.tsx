@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
+import { useAssistant, useAssistantPage } from '../../assistant/AssistantContext';
 import { formatMoney, formatPct } from '../../api/format';
 import { ApplicationsList } from '../../components/ApplicationsList';
 import type { Recommendation } from '../../api/types';
@@ -9,17 +10,34 @@ import { ErrorBox, Loader } from '../../components/ui';
 
 export function NeedPage() {
   const navigate = useNavigate();
+  const assistant = useAssistant();
+  const [search, setSearch] = useSearchParams();
   const purposes = useQuery({ queryKey: ['purposes'], queryFn: api.purposes });
   const [purpose, setPurpose] = useState('WORKING_CAPITAL');
   const [amount, setAmount] = useState('1200000');
   const [term, setTerm] = useState('9');
   const recommend = useMutation({
-    mutationFn: () => api.recommend(purpose, Number(amount), Number(term)),
+    mutationFn: (need: { purpose: string; amount: string; term: string }) =>
+      api.recommend(need.purpose, Number(need.amount), Number(need.term)),
   });
+  useAssistantPage({ purpose, amount: Number(amount) || undefined, termMonths: Number(term) || undefined });
+
+  // Помощник подставляет значения через адрес страницы и сразу запускает подбор
+  useEffect(() => {
+    const p = search.get('purpose');
+    const a = search.get('amount');
+    const t = search.get('term');
+    if (!p || !a || !t) return;
+    setPurpose(p);
+    setAmount(a);
+    setTerm(t);
+    if (search.get('auto') === '1') recommend.mutate({ purpose: p, amount: a, term: t });
+    setSearch({}, { replace: true });
+  }, [search]);
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    recommend.mutate();
+    recommend.mutate({ purpose, amount, term });
   }
 
   function apply(productCode: string) {
@@ -37,7 +55,7 @@ export function NeedPage() {
         {purposes.isLoading && <Loader />}
         {purposes.error && <ErrorBox error={purposes.error} />}
         <form className="need-form" onSubmit={submit}>
-          <label className="field">
+          <label className="field" data-assist="need-purpose">
             <span>Цель</span>
             <select value={purpose} onChange={(e) => setPurpose(e.target.value)}>
               {purposes.data?.map((p) => (
@@ -47,11 +65,11 @@ export function NeedPage() {
               ))}
             </select>
           </label>
-          <label className="field">
+          <label className="field" data-assist="need-amount">
             <span>Сумма, ₽</span>
             <input type="number" min={1} step={1} value={amount} onChange={(e) => setAmount(e.target.value)} required />
           </label>
-          <label className="field">
+          <label className="field" data-assist="need-term">
             <span>Срок, месяцев</span>
             <input type="number" min={1} max={120} value={term} onChange={(e) => setTerm(e.target.value)} required />
           </label>
@@ -59,10 +77,28 @@ export function NeedPage() {
             {recommend.isPending ? 'Подбираем…' : 'Подобрать'}
           </button>
         </form>
+        {assistant.enabled && (
+          <div className="need-help">
+            <span className="muted small">Сомневаетесь?</span>
+            <button type="button" className="link small" onClick={() => assistant.openPanel('purpose', 'INLINE_PURPOSE')}>
+              Не знаю цель
+            </button>
+            <button type="button" className="link small" onClick={() => assistant.openPanel('term', 'INLINE_TERM')}>
+              Как выбрать срок?
+            </button>
+          </div>
+        )}
       </div>
 
       {recommend.error && <ErrorBox error={recommend.error} />}
-      {recommend.data && <Recommendations items={recommend.data} amount={amount} onApply={apply} />}
+      {recommend.data && (
+        <Recommendations
+          items={recommend.data}
+          amount={String(recommend.variables?.amount ?? amount)}
+          onApply={apply}
+          onCompare={assistant.enabled ? () => assistant.openPanel('compare', 'INLINE_COMPARE') : undefined}
+        />
+      )}
       <ApplicationsList title="Мои заявки" />
     </div>
   );
@@ -73,17 +109,19 @@ export function Recommendations({
   items,
   amount,
   onApply,
+  onCompare,
 }: {
   items: Recommendation[];
   amount: string;
   onApply: (code: string) => void;
+  onCompare?: () => void;
 }) {
   const available = items.filter((r) => r.available);
   if (available.length === 0) {
     // Подсказки берём у продуктов, которые подходят по цели: им не хватает только суммы, срока или оборота
     const hints = Array.from(new Set(items.filter((r) => r.fits.some((f) => f.startsWith('подходит для цели'))).flatMap((r) => r.limits)));
     return (
-      <div className="card no-match">
+      <div className="card no-match" data-assist="recommendations">
         <h2>Под такие условия продуктов нет</h2>
         {hints.length > 0 ? (
           <>
@@ -101,7 +139,14 @@ export function Recommendations({
     );
   }
   return (
-    <div className="recommendations">
+    <div className="recommendations" data-assist="recommendations">
+      {onCompare && available.length > 1 && (
+        <div className="recommendations-head">
+          <button type="button" className="link" onClick={onCompare}>
+            Чем они отличаются?
+          </button>
+        </div>
+      )}
       {available.map((r, i) => (
         <div key={r.code} className={`card product-card ${i === 0 ? 'best' : ''}`}>
           {i === 0 && available.length > 1 && <span className="best-flag">Лучше всего подходит</span>}

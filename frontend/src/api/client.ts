@@ -16,6 +16,15 @@ import type {
   TaskListItem,
   User,
 } from './types';
+import type {
+  AssistantConfig,
+  AssistantEventType,
+  AssistantReply,
+  DialogState,
+  PageContext,
+  PageKind,
+  Slots,
+} from '../assistant/types';
 
 const TOKEN_KEY = 'credit.token';
 
@@ -158,6 +167,19 @@ export const api = {
   ) => request<TaskCard>('POST', `/api/bank/tasks/${id}/decision`, body),
 
   resetDemo: () => request<{ message: string }>('POST', '/api/dev/reset-demo'),
+
+  assistantConfig: () => request<AssistantConfig>('GET', '/api/assistant/config'),
+  assistantMessage: (body: { state?: DialogState; slots: Slots; page: PageContext; text: string }) =>
+    request<AssistantReply>('POST', '/api/assistant/messages', body),
+  assistantAction: (body: {
+    state?: DialogState;
+    slots: Slots;
+    page: PageContext;
+    action: string;
+    params?: Record<string, string>;
+  }) => request<AssistantReply>('POST', '/api/assistant/actions', body),
+  assistantEvent: (body: { type: AssistantEventType; signal?: string; page?: PageKind; entry?: string }) =>
+    request<void>('POST', '/api/assistant/events', body),
 };
 
 /** Скачивание файла с токеном: браузер не передаёт заголовок авторизации по обычной ссылке. */
