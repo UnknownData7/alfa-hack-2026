@@ -5,6 +5,7 @@ import { api, ApiError } from '../../api/client';
 import { docTypeLabel, formatMoney, formatMonths, formatSize } from '../../api/format';
 import type { ApplicationDetail, DraftRequest, Product } from '../../api/types';
 import { useAssistant, useAssistantPage } from '../../assistant/AssistantContext';
+import { useVisibleTimer } from '../../assistant/proactive';
 import { ErrorBox, KeyValue, Loader, Term } from '../../components/ui';
 
 const STEPS = ['Условия', 'Данные', 'Документы', 'Проверка и отправка'];
@@ -87,6 +88,28 @@ export function WizardPage() {
     productCode: form.productCode,
   });
 
+  // Признаки затруднения: шаг долго без изменений, одна и та же ошибка подряд, попытка уйти с черновиком
+  const lastError = useRef<{ text: string; count: number } | null>(null);
+  useVisibleTimer(assistant.config?.wizardIdleSeconds, true, () => assistant.offer('WIZARD_IDLE'), {
+    resetKey: `${step}|${JSON.stringify(form)}`,
+  });
+  const offer = assistant.offer;
+  useEffect(() => {
+    if (!draftId) return;
+    const onLeave = (e: MouseEvent) => {
+      // Курсор ушёл за верхний край окна, к вкладкам или адресной строке
+      if (e.clientY <= 0) offer('LEAVE_DRAFT');
+    };
+    document.addEventListener('mouseleave', onLeave);
+    return () => document.removeEventListener('mouseleave', onLeave);
+  }, [draftId, offer]);
+
+  function validationFailed(text: string) {
+    const count = lastError.current?.text === text ? lastError.current.count + 1 : 1;
+    lastError.current = { text, count };
+    if (assistant.config && count >= assistant.config.validationRepeats) assistant.offer('VALIDATION_REPEAT');
+  }
+
   // Загрузка существующего черновика или предзаполнение из прошлой заявки
   useEffect(() => {
     const sourceId = draftId ?? fromId;
@@ -146,6 +169,7 @@ export function WizardPage() {
     if (step === 0) {
       if (conditionsError) {
         setError(new ApiError(400, conditionsError));
+        validationFailed(conditionsError);
         return;
       }
       if (!draftId) {
@@ -167,6 +191,7 @@ export function WizardPage() {
     }
     if (step === 1 && product?.requiresCollateral && form.collateralDescription.trim() === '') {
       setError(new ApiError(400, 'Опишите залог: что это за имущество и его примерная стоимость'));
+      validationFailed('collateral');
       return;
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));

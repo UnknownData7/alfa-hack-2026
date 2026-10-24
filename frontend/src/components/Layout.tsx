@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { useAssistant } from '../assistant/AssistantContext';
 import { AssistantWidget } from '../assistant/AssistantWidget';
 import { useAuth } from '../auth/AuthContext';
 import { useSettings, type ThemeChoice } from '../settings/SettingsContext';
@@ -115,7 +116,8 @@ const THEMES: Array<[ThemeChoice, string]> = [
 
 function SettingsDrawer({ onClose }: { onClose: () => void }) {
   const { user, logout } = useAuth();
-  const { theme, setTheme, hideBalance, setHideBalance } = useSettings();
+  const { theme, setTheme, hideBalance, setHideBalance, proactiveHelp, setProactiveHelp } = useSettings();
+  const assistant = useAssistant();
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -175,6 +177,21 @@ function SettingsDrawer({ onClose }: { onClose: () => void }) {
               className="switch"
               checked={hideBalance}
               onChange={(e) => setHideBalance(e.target.checked)}
+            />
+          </label>
+        )}
+        {user?.role === 'CLIENT' && assistant.enabled && assistant.config?.proactive && (
+          <label className="setting toggle-row">
+            <span>
+              <strong>Предлагать помощь автоматически</strong>
+              <span className="muted small">Помощник предложит подсказку, если заметит, что вы сомневаетесь</span>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={proactiveHelp}
+              onChange={(e) => setProactiveHelp(e.target.checked)}
             />
           </label>
         )}

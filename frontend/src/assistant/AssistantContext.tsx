@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useSettings } from '../settings/SettingsContext';
 import { highlight, isNarrowScreen, pageKindFor } from './highlight';
+import { decideOffer, isTyping, OFFERS, type OfferLog, type Signal } from './proactive';
 import type {
   AssistantButton,
   AssistantConfig,
@@ -30,6 +32,12 @@ export interface AssistantApi {
   send: (text: string) => void;
   press: (button: AssistantButton) => void;
   setPageDetails: (details: Omit<PageContext, 'page'> | null) => void;
+  /** Предложение помощи, показанное пузырём над кнопкой. */
+  bubble: { signal: Signal; text: string } | null;
+  /** Страница сообщает о признаке затруднения; показывать ли пузырь, решают правила показа. */
+  offer: (signal: Signal) => void;
+  acceptOffer: () => void;
+  dismissOffer: () => void;
 }
 
 const STORAGE_KEY = 'credit.assistant';
@@ -40,6 +48,7 @@ interface Stored {
   state?: DialogState;
   slots: Slots;
   lastKind?: PageKind;
+  offers?: OfferLog;
 }
 
 function readStored(userId: number): Stored {
@@ -71,6 +80,8 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   const enabled = isClient && config.data?.enabled === true;
   const navigate = useNavigate();
   const location = useLocation();
+  const { proactiveHelp } = useSettings();
+  const proactive = enabled && config.data?.proactive === true && proactiveHelp;
 
   const [conversation, setConversation] = useState<Stored>(() => ({ userId: user?.id ?? 0, messages: [], slots: {} }));
   const [open, setOpen] = useState(false);
@@ -80,6 +91,12 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   const details = useRef<{ path: string; value: Omit<PageContext, 'page'> } | null>(null);
   const conversationRef = useRef(conversation);
   conversationRef.current = conversation;
+  const [bubble, setBubble] = useState<{ signal: Signal; text: string; path: string } | null>(null);
+  const bubbleRef = useRef(bubble);
+  bubbleRef.current = bubble;
+  const offerTimer = useRef<number | null>(null);
+  const openRef = useRef(open);
+  openRef.current = open;
 
   useEffect(() => {
     if (!user) return;
@@ -216,10 +233,80 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
   );
 
   const restart = useCallback(() => {
-    setConversation((c) => ({ userId: c.userId, messages: [], slots: {} }));
-    conversationRef.current = { userId: conversationRef.current.userId, messages: [], slots: {} };
+    const fresh = { userId: conversationRef.current.userId, messages: [], slots: {}, offers: conversationRef.current.offers };
+    setConversation(fresh);
+    conversationRef.current = fresh;
     action('START');
   }, [action]);
+
+  // --- Предложения помощи
+
+  const markOffer = useCallback((path: string, mark: 'shown' | 'dismissed') => {
+    setConversation((c) => {
+      const log = c.offers ?? { total: 0, pages: {} };
+      return {
+        ...c,
+        offers: { total: mark === 'shown' ? log.total + 1 : log.total, pages: { ...log.pages, [path]: mark } },
+      };
+    });
+  }, []);
+
+  const offer = useCallback(
+    (signal: Signal) => {
+      const path = location.pathname;
+      const page = pageKindFor(path);
+      if (offerTimer.current) window.clearTimeout(offerTimer.current);
+      let attempts = 10;
+      const tryShow = () => {
+        const decision = decideOffer(
+          conversationRef.current.offers ?? { total: 0, pages: {} },
+          path,
+          {
+            enabled: proactive,
+            panelOpen: openRef.current,
+            bubbleShown: false,
+            tabVisible: document.visibilityState === 'visible',
+            maxPerSession: config.data?.maxOffersPerSession ?? 3,
+          },
+          isTyping(),
+        );
+        if (decision === 'show') {
+          setBubble({ signal, text: OFFERS[signal].text, path });
+          markOffer(path, 'shown');
+          api.assistantEvent({ type: 'OFFER_SHOWN', signal, page }).catch(() => {});
+        } else if (decision === 'later' && attempts-- > 0) {
+          // Клиент печатает или вкладка неактивна: ждём, пока освободится
+          offerTimer.current = window.setTimeout(tryShow, 1000);
+        }
+      };
+      if (!bubbleRef.current) tryShow();
+    },
+    [location.pathname, proactive, config.data?.maxOffersPerSession, markOffer],
+  );
+
+  const acceptOffer = useCallback(() => {
+    if (!bubble) return;
+    api.assistantEvent({ type: 'OFFER_ACCEPTED', signal: bubble.signal, page: pageKindFor(bubble.path) }).catch(() => {});
+    setBubble(null);
+    openPanel(OFFERS[bubble.signal].topic, 'OFFER');
+  }, [bubble, openPanel]);
+
+  const dismissOffer = useCallback(() => {
+    if (!bubble) return;
+    api.assistantEvent({ type: 'OFFER_DISMISSED', signal: bubble.signal, page: pageKindFor(bubble.path) }).catch(() => {});
+    markOffer(bubble.path, 'dismissed');
+    setBubble(null);
+  }, [bubble, markOffer]);
+
+  // Пузырь относится к странице, где возник сигнал
+  useEffect(() => {
+    setBubble(null);
+    if (offerTimer.current) window.clearTimeout(offerTimer.current);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (open) setBubble(null);
+  }, [open]);
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -253,8 +340,29 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
       send,
       press,
       setPageDetails,
+      bubble: bubble && enabled ? { signal: bubble.signal, text: bubble.text } : null,
+      offer,
+      acceptOffer,
+      dismissOffer,
     }),
-    [enabled, config.data, open, conversation.messages, pending, error, openPanel, close, restart, send, press, setPageDetails],
+    [
+      enabled,
+      config.data,
+      open,
+      conversation.messages,
+      pending,
+      error,
+      openPanel,
+      close,
+      restart,
+      send,
+      press,
+      setPageDetails,
+      bubble,
+      offer,
+      acceptOffer,
+      dismissOffer,
+    ],
   );
   return <AssistantContext.Provider value={value}>{children}</AssistantContext.Provider>;
 }
@@ -272,6 +380,10 @@ const disabled: AssistantApi = {
   send: () => {},
   press: () => {},
   setPageDetails: () => {},
+  bubble: null,
+  offer: () => {},
+  acceptOffer: () => {},
+  dismissOffer: () => {},
 };
 
 /** Вне провайдера (например в тестах отдельных компонентов) помощник просто выключен. */

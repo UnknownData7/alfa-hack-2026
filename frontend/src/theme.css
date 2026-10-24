@@ -2145,6 +2145,7 @@ input.switch:checked::after {
   width: 380px;
   height: min(560px, calc(100vh - 120px));
   background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 20px;
   box-shadow: var(--drawer-shadow);
   display: flex;
@@ -2326,4 +2327,25 @@ input.switch:checked::after {
 
 .wizard-help {
   margin: -6px 0 12px;
+}
+
+/* Пузырь с предложением помощи: над кнопкой, не перекрывает форму и не забирает фокус */
+.assistant-bubble {
+  max-width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--drawer-shadow);
+  padding: 14px 16px;
+  font-size: 14px;
+  animation: drawer-in 0.18s ease-out;
+}
+
+.assistant-bubble p {
+  margin: 0 0 10px;
+}
+
+.assistant-bubble-actions {
+  display: flex;
+  gap: 8px;
 }

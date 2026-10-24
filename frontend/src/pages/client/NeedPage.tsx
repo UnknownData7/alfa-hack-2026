@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../api/client';
 import { useAssistant, useAssistantPage } from '../../assistant/AssistantContext';
+import { useVisibleTimer } from '../../assistant/proactive';
 import { formatMoney, formatPct } from '../../api/format';
 import { ApplicationsList } from '../../components/ApplicationsList';
 import type { Recommendation } from '../../api/types';
@@ -35,8 +36,36 @@ export function NeedPage() {
     setSearch({}, { replace: true });
   }, [search]);
 
+  // Признаки затруднения: бездействие до подбора, частая смена цели, суммы и срока, долгий выбор между продуктами
+  const config = assistant.config;
+  const purposeChanges = useRef<number[]>([]);
+  const valueChanges = useRef(0);
+  const focusValue = useRef('');
+  useVisibleTimer(config?.idleSeconds, !recommend.data && !recommend.isPending, () => assistant.offer('IDLE_NEED'), {
+    resetOnActivity: true,
+  });
+  const availableCount = recommend.data?.filter((r) => r.available).length ?? 0;
+  useVisibleTimer(config?.recommendationsSeconds, availableCount > 1, () => assistant.offer('COMPARE_DOUBT'), {
+    resetKey: recommend.data,
+  });
+
+  function changePurpose(value: string) {
+    setPurpose(value);
+    const now = Date.now();
+    purposeChanges.current = [...purposeChanges.current.filter((t) => now - t < 60_000), now];
+    if (config && purposeChanges.current.length >= config.purposeChanges) assistant.offer('PURPOSE_CHANGES');
+  }
+
+  /** Изменение суммы или срока засчитывается, когда клиент уходит из поля с другим значением. */
+  function commitValue(value: string) {
+    if (value === focusValue.current) return;
+    valueChanges.current += 1;
+    if (config && valueChanges.current >= config.valueChanges) assistant.offer('TERM_DOUBT');
+  }
+
   function submit(e: FormEvent) {
     e.preventDefault();
+    valueChanges.current = 0;
     recommend.mutate({ purpose, amount, term });
   }
 
@@ -57,7 +86,7 @@ export function NeedPage() {
         <form className="need-form" onSubmit={submit}>
           <label className="field" data-assist="need-purpose">
             <span>Цель</span>
-            <select value={purpose} onChange={(e) => setPurpose(e.target.value)}>
+            <select value={purpose} onChange={(e) => changePurpose(e.target.value)}>
               {purposes.data?.map((p) => (
                 <option key={p.code} value={p.code}>
                   {p.label}
@@ -67,11 +96,29 @@ export function NeedPage() {
           </label>
           <label className="field" data-assist="need-amount">
             <span>Сумма, ₽</span>
-            <input type="number" min={1} step={1} value={amount} onChange={(e) => setAmount(e.target.value)} required />
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              onFocus={(e) => (focusValue.current = e.target.value)}
+              onBlur={(e) => commitValue(e.target.value)}
+              required
+            />
           </label>
           <label className="field" data-assist="need-term">
             <span>Срок, месяцев</span>
-            <input type="number" min={1} max={120} value={term} onChange={(e) => setTerm(e.target.value)} required />
+            <input
+              type="number"
+              min={1}
+              max={120}
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              onFocus={(e) => (focusValue.current = e.target.value)}
+              onBlur={(e) => commitValue(e.target.value)}
+              required
+            />
           </label>
           <button type="submit" className="btn btn-primary" disabled={recommend.isPending}>
             {recommend.isPending ? 'Подбираем…' : 'Подобрать'}

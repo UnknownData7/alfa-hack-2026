@@ -37,6 +37,19 @@ export function AssistantWidget() {
   return (
     <div className="assistant-root">
       {assistant.open && <AssistantPanel />}
+      {!assistant.open && assistant.bubble && (
+        <div className="assistant-bubble" role="status">
+          <p>{assistant.bubble.text}</p>
+          <div className="assistant-bubble-actions">
+            <button type="button" className="btn btn-primary btn-sm" onClick={assistant.acceptOffer}>
+              Помочь
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={assistant.dismissOffer}>
+              Не сейчас
+            </button>
+          </div>
+        </div>
+      )}
       <button
         type="button"
         className="assistant-fab"

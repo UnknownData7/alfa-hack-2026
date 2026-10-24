@@ -5,8 +5,11 @@ export type ThemeChoice = 'light' | 'dark' | 'system';
 interface Settings {
   theme: ThemeChoice;
   hideBalance: boolean;
+  /** Помощник сам предлагает подсказку, если заметит затруднение. */
+  proactiveHelp: boolean;
   setTheme: (theme: ThemeChoice) => void;
   setHideBalance: (hide: boolean) => void;
+  setProactiveHelp: (on: boolean) => void;
 }
 
 const STORAGE_KEY = 'credit.settings';
@@ -14,6 +17,7 @@ const STORAGE_KEY = 'credit.settings';
 interface Stored {
   theme?: ThemeChoice;
   hideBalance?: boolean;
+  proactiveHelp?: boolean;
 }
 
 function read(): Stored {
@@ -35,11 +39,12 @@ function write(value: Stored) {
 
 const SettingsContext = createContext<Settings | null>(null);
 
-/** Личные настройки интерфейса: тема и скрытие остатков. Хранятся только в браузере. */
+/** Личные настройки интерфейса: тема, скрытие остатков, подсказки помощника. Хранятся только в браузере. */
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const initial = read();
   const [theme, setTheme] = useState<ThemeChoice>(initial.theme ?? 'system');
   const [hideBalance, setHideBalance] = useState(initial.hideBalance ?? false);
+  const [proactiveHelp, setProactiveHelp] = useState(initial.proactiveHelp ?? true);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -48,10 +53,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       root.setAttribute('data-theme', theme);
     }
-    write({ theme, hideBalance });
-  }, [theme, hideBalance]);
+    write({ theme, hideBalance, proactiveHelp });
+  }, [theme, hideBalance, proactiveHelp]);
 
-  const value = useMemo(() => ({ theme, hideBalance, setTheme, setHideBalance }), [theme, hideBalance]);
+  const value = useMemo(
+    () => ({ theme, hideBalance, proactiveHelp, setTheme, setHideBalance, setProactiveHelp }),
+    [theme, hideBalance, proactiveHelp],
+  );
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
 
