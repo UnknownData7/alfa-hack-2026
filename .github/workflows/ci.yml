@@ -30,7 +30,9 @@ jobs:
         shell: bash
         run: |
           grep -E '^\[ERROR\]' maven.log | grep -v -E 'To see the full|Re-run Maven|^\[ERROR\] *$|-> \[Help' | head -30 \
-            | sed 's/%/%25/g' | while IFS= read -r line; do echo "::error title=maven::${line}"; done
+            | sed 's/%/%25/g' | head -4 | while IFS= read -r line; do echo "::error title=maven::${line}"; done
+          grep -h -o 'Caused by: .*' target/surefire-reports/* 2>/dev/null | cut -c1-400 | sort | uniq -c | sort -rn | head -6 \
+            | sed 's/%/%25/g' | while IFS= read -r line; do echo "::error title=cause::${line}"; done
       - name: Отчёты тестов
         if: always()
         uses: actions/upload-artifact@v5

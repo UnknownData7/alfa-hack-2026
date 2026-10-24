@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,7 @@ public class LoginAttemptService {
     private final Clock clock;
     private final Map<String, Deque<Instant>> failures = new ConcurrentHashMap<>();
 
+    @Autowired
     public LoginAttemptService(@Value("${app.security.login.max-attempts:5}") int maxAttempts,
                                @Value("${app.security.login.window-minutes:15}") long windowMinutes) {
         this(maxAttempts, Duration.ofMinutes(windowMinutes), Clock.systemUTC());
