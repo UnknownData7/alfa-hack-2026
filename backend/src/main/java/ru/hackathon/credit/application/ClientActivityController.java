@@ -50,6 +50,10 @@ public class ClientActivityController {
                     d.getAmount(), a.getId(), a.getNumber(), d.getExecutedAt())));
             for (ApplicationDtos.HistoryEntry h : ApplicationViews.clientHistory(
                     history.findByApplicationIdOrderByIdAsc(a.getId()))) {
+                // Выдачу показывает операция зачисления, отдельное событие статуса не дублируем
+                if (h.toStatus() == ApplicationStatus.ISSUED) {
+                    continue;
+                }
                 result.add(new Activity("STATUS", h.toStatusLabel(), h.comment(), null, a.getId(), a.getNumber(),
                         h.createdAt()));
             }
