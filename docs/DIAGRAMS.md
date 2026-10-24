@@ -150,6 +150,38 @@ stateDiagram-v2
   Issued --> [*]
 ```
 
+## 4. Помощник клиента: шаги разговора
+
+Реализация `DialogOrchestrator`. Вопрос в свободной форме и отказ по теме не меняют шаг: клиент получает ответ и кнопку возврата к тому месту, где был. Подсказки в мастере и на странице заявки открываются по странице, на которой клиент вызвал помощника.
+
+```mermaid
+stateDiagram-v2
+  state "Приветствие" as Greeting
+  state "Цель" as Purpose
+  state "Уточнение цели" as Detail
+  state "Сумма" as Amount
+  state "Варианты срока" as Term
+  state "Итог" as Summary
+  state "Продукты" as Products
+  state "Сравнение" as Compare
+  state "Подсказки в мастере" as Wizard
+  state "Подсказки по заявке" as Application
+  [*] --> Greeting
+  Greeting --> Purpose: «Подобрать кредит»
+  Purpose --> Detail: цель выбрана или понята из текста
+  Detail --> Amount: ответ на уточнение
+  Amount --> Term: сумма указана
+  Amount --> Amount: под сумму нет продукта
+  Term --> Summary: срок написан текстом
+  Term --> Products: «Подставить в форму»
+  Summary --> Products: «Подставить в форму»
+  Products --> Compare: «Чем отличаются продукты?»
+  Compare --> Wizard: «Выбрать продукт», открыт мастер
+  Products --> Wizard: «Оформить» на карточке
+  Wizard --> Application: заявка отправлена
+  Application --> Purpose: «Подать новую заявку»
+```
+
 ## Что взято из идей промышленных систем и как адаптировано
 
 | Идея | Как в MVP |

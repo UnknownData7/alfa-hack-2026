@@ -70,6 +70,17 @@
 | `GET /api/feed` | лента «Для вас»: непрочитанные события и новости с датой |
 | `POST /api/feed/{id}/read` | убрать карточку из ленты: `event-N` (событие) или `news-N` (новость, подсказка) |
 
+### Помощник (`CLIENT`)
+
+Разговор хранит браузер: с каждым запросом он присылает шаг (`state`), заполненные поля (`slots`) и контекст страницы (`page`: тип страницы, шаг мастера, статус заявки, значения формы). Ответ содержит текст, варианты срока с платежом, кнопки и действия в интерфейсе (`FILL_NEED_FORM`, `OPEN_WIZARD`, `NAVIGATE`, `HIGHLIGHT`). Помощник не создаёт и не отправляет заявки. Не больше 20 сообщений в минуту, иначе `429`.
+
+| Метод и путь | Назначение |
+|---|---|
+| `GET /api/assistant/config` | включён ли помощник, предлагать ли помощь автоматически, пороги сигналов |
+| `POST /api/assistant/messages` | сообщение в свободной форме, до 1000 символов |
+| `POST /api/assistant/actions` | нажатие кнопки: `action` и `params` из предыдущего ответа |
+| `POST /api/assistant/events` | событие виджета для метрик (`OPENED`, `OFFER_SHOWN`, `OFFER_ACCEPTED`, `OFFER_DISMISSED`) без текста сообщений, ответ `204` |
+
 ### Банк (`UNDERWRITER`)
 
 | Метод и путь | Назначение |
@@ -139,6 +150,34 @@ POST /api/applications/17/sign
 Authorization: Bearer <token>
 
 { "termsAccepted": true }
+```
+
+### Помощник: сумма своими словами
+
+```http
+POST /api/assistant/messages
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{"page": {"page": "NEED"}, "text": "нужно 400 тысяч, чтобы закрыть аренду, пока не пришла оплата от заказчика"}
+```
+
+Ответ (сокращён):
+
+```json
+{
+  "state": "TERM",
+  "slots": {"purpose": "CASH_GAP", "amount": 400000, "productCode": "WORKING_EXPRESS"},
+  "text": "Похоже, ваша задача называется «Кассовый разрыв».\n\nДля такой задачи подходит «Оборотный экспресс», ставка от 18% годовых. …",
+  "terms": [
+    {"termMonths": 3, "monthlyPayment": 137353, "overpayment": 12059, "recommended": false},
+    {"termMonths": 6, "monthlyPayment": 70210, "overpayment": 21260, "recommended": true},
+    {"termMonths": 12, "monthlyPayment": 36672, "overpayment": 40064, "recommended": false}
+  ],
+  "buttons": [{"label": "Подставить 400 000 ₽ на 6 месяцев", "action": "FILL_FORM", "params": {"purpose": "CASH_GAP", "amount": "400000", "term": "6"}}],
+  "ui": [],
+  "sources": ["product.WORKING_EXPRESS"]
+}
 ```
 
 ## Коллекция запросов
