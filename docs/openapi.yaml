@@ -28,6 +28,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401': &id001
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Слишком много неудачных попыток, заголовок Retry-After
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
       requestBody:
         required: true
         content:
@@ -377,33 +383,11 @@ paths:
         required: true
         schema:
           type: integer
-  /api/applications/{id}/signing/send-code:
+  /api/applications/{id}/sign:
     post:
       tags:
       - Заявки клиента
-      summary: Получить код подтверждения
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SendCodeResponse'
-        '401': *id001
-        '403': *id003
-        '404': *id004
-        '409': *id005
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
-  /api/applications/{id}/signing/confirm:
-    post:
-      tags:
-      - Заявки клиента
-      summary: Подтвердить код и выполнить симуляцию выдачи
+      summary: Подписать договор и выполнить симуляцию выдачи
       responses:
         '200':
           description: OK
@@ -422,18 +406,35 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ConfirmCodeRequest'
+              $ref: '#/components/schemas/SignRequest'
       parameters:
       - name: id
         in: path
         required: true
         schema:
           type: integer
+      description: 'Без `termsAccepted: true` ответ 422 TERMS_NOT_ACCEPTED. Сумма зачисляется на расчётный счёт компании.'
+  /api/client/activity:
+    get:
+      tags:
+      - Клиент
+      summary: 'История операций: зачисления и события по заявкам'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+        '401': *id001
+        '403': *id003
   /api/feed:
     get:
       tags:
       - Лента
-      summary: Лента «Для вас»
+      summary: 'Лента «Для вас»: непрочитанные события и новости с датой'
       responses:
         '200':
           description: OK
@@ -449,7 +450,7 @@ paths:
     post:
       tags:
       - Лента
-      summary: Отметить событие прочитанным
+      summary: Убрать карточку из ленты
       responses:
         '204':
           description: Готово
@@ -461,7 +462,9 @@ paths:
         in: path
         required: true
         schema:
-          type: integer
+          type: string
+          pattern: ^(event|news)-\d+$
+      description: 'Идентификатор карточки: `event-N` для события по заявке или `news-N` для новости и подсказки.'
   /api/bank/tasks:
     get:
       tags:
@@ -822,6 +825,9 @@ components:
         financialsAsOf:
           type: string
           format: date
+        accountBalance:
+          type: number
+          description: Остаток расчётного счёта (синтетический)
     Purpose:
       type: object
       properties:
@@ -1084,39 +1090,6 @@ components:
           type: integer
         comment:
           type: string
-    Decision:
-      type: object
-      properties:
-        summary:
-          type: string
-        reasonCode:
-          type: string
-        grade:
-          type: string
-          enum:
-          - A
-          - B
-          - C
-          - D
-        score:
-          type: integer
-        hardStopReason:
-          type: string
-        factors:
-          type: array
-          items:
-            $ref: '#/components/schemas/Factor'
-    Signing:
-      type: object
-      properties:
-        codeRequested:
-          type: boolean
-        attemptsLeft:
-          type: integer
-        blocked:
-          type: boolean
-        confirmed:
-          type: boolean
     Disbursement:
       type: object
       properties:
@@ -1167,10 +1140,8 @@ components:
         submittedAt: *id008
         nextStep:
           $ref: '#/components/schemas/NextStep'
-        decision:
-          $ref: '#/components/schemas/Decision'
         offer:
-          $ref: '#/components/schemas/Offer'
+          $ref: '#/components/schemas/ClientOffer'
         history:
           type: array
           items:
@@ -1183,8 +1154,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Document'
-        signing:
-          $ref: '#/components/schemas/Signing'
         disbursement:
           $ref: '#/components/schemas/Disbursement'
     SubmitResponse:
@@ -1210,24 +1179,6 @@ components:
           type: string
       required:
       - answer
-    SendCodeResponse:
-      type: object
-      properties:
-        attemptsLeft:
-          type: integer
-        demoCode:
-          type: string
-          description: Только в демо-режиме
-        hint:
-          type: string
-    ConfirmCodeRequest:
-      type: object
-      properties:
-        code:
-          type: string
-          pattern: ^\d{6}$
-      required:
-      - code
     FeedCard:
       type: object
       properties:
@@ -1537,6 +1488,71 @@ components:
               type: integer
       required:
       - result
+    ClientOffer:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+          enum:
+          - INITIAL
+          - COUNTER
+        amount: &id010
+          type: number
+          format: decimal
+        termMonths:
+          type: integer
+        ratePct: *id010
+        monthlyPayment: *id010
+        totalPayment: *id010
+        overpayment: *id010
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - ACCEPTED
+          - DECLINED
+          - SUPERSEDED
+        summary:
+          type: string
+        changes:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+      description: 'Предложение для клиента: условия и что изменилось относительно заявки, без внутренних причин решения'
+    SignRequest:
+      type: object
+      properties:
+        termsAccepted:
+          type: boolean
+          description: Клиент ознакомился с условиями договора
+      required:
+      - termsAccepted
+    Activity:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - CREDIT
+          - STATUS
+        title:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+        applicationId:
+          type: integer
+        applicationNumber:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
   responses:
     BadRequest:
       description: Ошибка в данных

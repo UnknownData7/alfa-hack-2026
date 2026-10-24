@@ -31,8 +31,9 @@
 | 404 | объект не найден |
 | 409 | недопустимый переход статуса или конфликт версий |
 | 422 | нарушено бизнес-правило (например, не заполнены проверки) |
+| 429 | слишком много неудачных попыток входа; заголовок `Retry-After` содержит секунды до следующей попытки |
 
-Частые коды в поле `code`: `VALIDATION_ERROR`, `BAD_CREDENTIALS`, `INVALID_STATUS_TRANSITION`, `INVALID_STATUS`, `CONSENTS_REQUIRED`, `AMOUNT_OUT_OF_RANGE`, `TERM_OUT_OF_RANGE`, `CHECKS_INCOMPLETE`, `NEGATIVE_CHECK`, `CHECK_NEEDS_INFO`, `DECLINE_REASON_REQUIRED`, `WRONG_CODE`, `SIGNING_BLOCKED`, `TASK_ALREADY_IN_PROGRESS`, `QUEUE_EMPTY`, `CONCURRENT_MODIFICATION`.
+Частые коды в поле `code`: `VALIDATION_ERROR`, `BAD_CREDENTIALS`, `INVALID_STATUS_TRANSITION`, `INVALID_STATUS`, `CONSENTS_REQUIRED`, `AMOUNT_OUT_OF_RANGE`, `TERM_OUT_OF_RANGE`, `CHECKS_INCOMPLETE`, `NEGATIVE_CHECK`, `CHECK_NEEDS_INFO`, `DECLINE_REASON_REQUIRED`, `TERMS_NOT_ACCEPTED`, `FILE_CONTENT_MISMATCH`, `TOO_MANY_ATTEMPTS`, `TASK_ALREADY_IN_PROGRESS`, `QUEUE_EMPTY`, `CONCURRENT_MODIFICATION`.
 
 Чужая заявка возвращает `404`, а не `403`, чтобы не раскрывать факт её существования.
 
@@ -57,16 +58,17 @@
 | `PUT /api/applications/{id}` | обновить черновик (автосохранение) |
 | `POST /api/applications/{id}/submit` | отправить заявку, ответ `202`, обработка асинхронная |
 | `GET /api/applications` | мои заявки |
-| `GET /api/applications/{id}` | заявка: статус, история, пояснение решения, текущее предложение |
+| `GET /api/applications/{id}` | заявка: статус, следующий шаг, история с нейтральными комментариями, текущее предложение и что в нём изменилось. Баллов, грейда, факторов и причин решения в ответе клиенту нет |
 | `POST /api/applications/{id}/documents` | загрузить документ (multipart) |
 | `GET /api/applications/{id}/documents/{docId}` | скачать документ |
 | `POST /api/applications/{id}/info-requests/{rid}/answer` | ответить на запрос банка |
 | `POST /api/applications/{id}/offer/accept` | принять предложение |
 | `POST /api/applications/{id}/offer/decline` | отклонить предложение |
-| `POST /api/applications/{id}/signing/send-code` | получить код подтверждения (в демо-режиме код возвращается для показа в интерфейсе) |
-| `POST /api/applications/{id}/signing/confirm` | подтвердить код, запускается симуляция выдачи |
-| `GET /api/feed` | лента «Для вас» |
-| `POST /api/feed/{id}/read` | отметить прочитанным |
+| `POST /api/applications/{id}/sign` | подписать договор: тело `{"termsAccepted": true}`, выполняется симуляция выдачи, сумма зачисляется на счёт |
+| `GET /api/client/profile` | данные компании, маска и остаток расчётного счёта |
+| `GET /api/client/activity` | история операций: зачисления кредитов и события по заявкам, новые сверху |
+| `GET /api/feed` | лента «Для вас»: непрочитанные события и новости с датой |
+| `POST /api/feed/{id}/read` | убрать карточку из ленты: `event-N` (событие) или `news-N` (новость, подсказка) |
 
 ### Банк (`UNDERWRITER`)
 
@@ -130,15 +132,15 @@ Authorization: Bearer <token>
 { "result": "REQUEST_INFO", "requestText": "Приложите выписку по счёту за 12 месяцев" }
 ```
 
-Подтверждение кода подписания (неверный код возвращает `422` с числом оставшихся попыток):
+Подписание договора (без `termsAccepted: true` ответ `422 TERMS_NOT_ACCEPTED`, повторное подписание `409`):
 
 ```http
-POST /api/applications/17/signing/confirm
+POST /api/applications/17/sign
 Authorization: Bearer <token>
 
-{ "code": "482913" }
+{ "termsAccepted": true }
 ```
 
 ## Коллекция запросов
 
-В каталоге `postman/` лежит коллекция и environment. Коллекция сначала сбрасывает демо-данные, токены и идентификаторы подставляются скриптами. Покрыты вход и роли, S1 целиком, S2, S5 и путь андеррайтера в S4. Прогон из корня репозитория: `npx newman run postman/collection.json -e postman/environment.json --working-dir .`
+В каталоге `postman/` лежит коллекция и environment. Коллекция сначала сбрасывает демо-данные, токены и идентификаторы подставляются скриптами. Покрыты вход и роли, S1 целиком (подписание, остаток счёта, история операций, лента и «Прочитано»), S2, S5 и путь андеррайтера в S4. В ответах клиенту проверяется отсутствие полей внутренней оценки. Прогон из корня репозитория: `npx newman run postman/collection.json -e postman/environment.json --working-dir .`

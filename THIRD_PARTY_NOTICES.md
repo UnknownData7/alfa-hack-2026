@@ -15,6 +15,7 @@
 | PostgreSQL JDBC Driver | по BOM Spring Boot 3.5.6 | BSD 2-Clause | драйвер БД |
 | springdoc-openapi-starter-webmvc-ui | 2.8.9 | Apache License 2.0 | OpenAPI и Swagger UI |
 | Jackson | по BOM Spring Boot 3.5.6 | Apache License 2.0 | JSON |
+| Micrometer Registry Prometheus | по BOM Spring Boot 3.5.6 | Apache License 2.0 | метрики в формате Prometheus |
 
 Тестовые зависимости:
 
@@ -40,8 +41,9 @@
 | Testing Library (react, dom, jest-dom) | 16.3.3, 10.4.2, 6.9.1 | MIT |
 | jsdom | 26.1.0 | MIT |
 | @types/react, @types/react-dom | 18.3.31, 18.3.7 | MIT |
+| @fontsource-variable/golos-text (шрифт Golos Text) | 5.3.0 | SIL Open Font License 1.1 |
 
-Шрифты системные, внешние шрифты, иконки и CDN не используются.
+Шрифт Golos Text входит в сборку интерфейса и отдаётся с того же сервера. Иконки нарисованы в коде, внешние шрифты, иконки и CDN не используются.
 
 ## Образы Docker
 
@@ -58,6 +60,9 @@
 | Инструмент | Лицензия | Назначение |
 |---|---|---|
 | Newman (Postman CLI) | Apache License 2.0 | прогон коллекции `postman/collection.json` |
+| Maven Wrapper | Apache License 2.0 | запуск Maven 3.9.11 без предустановки (`backend/mvnw`) |
+| GitHub Actions: checkout, setup-java, setup-node, upload-artifact (v5) | MIT | CI: тесты, сборка, смоук-тест |
+| Dependabot | сервис GitHub | предложения обновлений зависимостей |
 
 ## Смоделированные интеграции
 
@@ -68,7 +73,6 @@
 | Реестр юрлиц и ИП (аналог ЕГРЮЛ/ЕГРИП) | `CompanyRegistryClient` | `MockCompanyRegistryClient` |
 | Бюро кредитных историй | `CreditBureauClient` | `MockCreditBureauClient` |
 | Сведения ФНС о налоговой задолженности | `TaxServiceClient` | `MockTaxServiceClient` |
-| Подписание и доставка кода подтверждения | `SigningProvider` | `MockSigningProvider` (код показывается в интерфейсе) |
 | Выдача денежных средств | `DisbursementProvider` | `MockDisbursementProvider` (только запись о симуляции) |
 
 ## Данные
