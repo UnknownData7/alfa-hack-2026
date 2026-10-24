@@ -16,17 +16,24 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
       - name: Тесты (Testcontainers поднимает PostgreSQL)
-        run: ./mvnw -B -ntp verify
+        run: ./mvnw -B -ntp verify 2>&1 | tee maven.log; test ${PIPESTATUS[0]} -eq 0
+        shell: bash
+      - name: Причины падения в аннотациях
+        if: failure()
+        shell: bash
+        run: |
+          grep -E '^\[ERROR\]' maven.log | grep -v -E 'To see the full|Re-run Maven|^\[ERROR\] *$|-> \[Help' | head -30 \
+            | sed 's/%/%25/g' | while IFS= read -r line; do echo "::error title=maven::${line}"; done
       - name: Отчёты тестов
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: surefire-reports
           path: backend/target/surefire-reports
@@ -39,8 +46,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -54,7 +61,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [backend, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Запуск стенда
         run: |
           cp .env.example .env
