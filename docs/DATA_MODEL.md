@@ -67,14 +67,14 @@ erDiagram
   }
 ```
 
-Показаны ключевые атрибуты. Полный состав — в миграциях.
+Показаны ключевые атрибуты. Полный состав в миграциях Flyway.
 
 ## Описание таблиц
 
 | Таблица | Назначение | Ключевые поля |
 |---|---|---|
 | `app_user` | пользователи и роли | login, password_hash, role, company_id |
-| `company` | профиль компании-клиента | inn, legal_form (`IP`/`OOO`), okved_code, industry_risk, registration_date, employees_count, tax_system, account_masked, account_balance (остаток синтетического счёта, версия 2), months_with_bank |
+| `company` | профиль компании-клиента | inn, legal_form (`IP`/`OOO`), okved_code, industry_risk, registration_date, employees_count, tax_system, account_masked, account_balance (остаток синтетического счёта), months_with_bank |
 | `company_financials` | синтетический снимок «по данным банка» | annual_turnover_12m, avg_monthly_turnover, turnover_growth_pct, existing_monthly_obligations |
 | `product` | каталог продуктов | code, purposes (коды целей через запятую), spread_pct, min/max сумма и срок, requires_collateral, routing, auto_limit_amount, min_avg_monthly_turnover, max_turnover_share (лимит как доля среднего месячного оборота, у овердрафта 0,5) |
 | `loan_application` | заявка | number, product_code, purpose, requested_amount, requested_term_months, monthly_obligations_declared, collateral_description, согласия, status, decision_reason_code, decision_summary, current_offer_id, parent_application_id (новая заявка после отказа), version |
@@ -86,15 +86,15 @@ erDiagram
 | `task_check` | проверки по задаче | check_code, title, goal, status (`PENDING`/`OK`/`NEGATIVE`/`NEEDS_INFO`), comment |
 | `bank_decision` | решение андеррайтера | result, comment, counter_offer |
 | `info_request` | запрос данных у клиента | source (`SYSTEM`/`BANK`), task_id, text, status, client_answer |
-| `feed_dismissal` | скрытые клиентом новости и подсказки (версия 2) | company_id, news_id, dismissed_at |
+| `feed_dismissal` | скрытые клиентом новости и подсказки | company_id, news_id, dismissed_at |
 | `disbursement` | симуляция выдачи | amount, account_masked, simulated = true |
 | `status_history` / `audit_event` | история переходов и событий | from_status, to_status, actor_type, actor_id, comment |
 | `feed_item` | элементы ленты клиента | type, title, body, reason, related_application_id, is_read |
-| `news_catalog` | каталог новостей и подсказок с таргетингом | type, title, body, target_legal_form, target_industry_risk, target_product_code, target_status, weight, published_at (дата публикации, версия 2) (пустое поле таргетинга значит «подходит всем») |
+| `news_catalog` | каталог новостей и подсказок с таргетингом | type, title, body, target_legal_form, target_industry_risk, target_product_code, target_status, weight, published_at (дата публикации) (пустое поле таргетинга значит «подходит всем») |
 
 ## Принципы
 
 - Решение по заявке воспроизводимо: в `scoring_result` хранится снимок входных данных и разбор по факторам, история запусков не удаляется.
 - Любое изменение статуса фиксируется в `status_history` с автором и комментарием.
 - Деньги хранятся как `decimal`, а не как число с плавающей точкой.
-- Документы лежат в файловом хранилище (том Docker), в БД — только метаданные и путь.
+- Документы лежат в файловом хранилище (том Docker), в БД хранятся только метаданные и путь.

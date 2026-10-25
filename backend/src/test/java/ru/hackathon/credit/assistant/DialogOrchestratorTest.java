@@ -139,7 +139,7 @@ class DialogOrchestratorTest {
         Reply r = small.message(new MessageRequest(DialogState.AMOUNT, new Slots(Purpose.CASH_GAP, null, null, 6, null),
                 NEED, "50 000 ₽"));
         assertEquals(DialogState.AMOUNT, r.state());
-        assertTrue(r.text().startsWith("Под такие условия продукта нет."));
+        assertTrue(r.text().startsWith("Под такие условия продукта нет"));
         assertTrue(r.text().contains("сумма должна быть от 100"), r.text());
     }
 

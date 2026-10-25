@@ -156,7 +156,7 @@ public class DialogOrchestrator {
         }
         String plain = Guardrails.normalize(text).replaceAll("[^\\p{L} ]", "").strip();
         if (plain.matches("(?U)(привет|здравствуй\\w*|добрый (день|вечер)|доброе утро|hello|hi)\\b.{0,20}")) {
-            askPurpose(t, "Здравствуйте! Помогу подобрать и оформить кредит для бизнеса. Для чего нужны деньги?");
+            askPurpose(t, "Здравствуйте. Помогу подобрать и оформить кредит для бизнеса. Для чего нужны деньги?");
             return finish(t);
         }
         if (!text.matches(".*\\d.*") && plain.matches("(?U)(спасибо|благодарю|понятно|ясно|ок|хорошо)\\b.{0,20}")) {
@@ -406,9 +406,9 @@ public class DialogOrchestrator {
                 .distinct()
                 .toList();
         t.state = DialogState.AMOUNT;
-        t.say("Под такие условия продукта нет.");
+        t.say("Под такие условия продукта нет");
         if (hints.isEmpty()) {
-            t.say("Для этой цели у банка нет подходящего продукта, попробуйте выбрать другую цель.");
+            t.say("Для этой цели у банка нет подходящего продукта, попробуйте выбрать другую цель");
         } else {
             t.say("Что можно изменить:\n" + hints.stream().map(h -> "• " + h).collect(Collectors.joining("\n")));
         }
@@ -444,7 +444,7 @@ public class DialogOrchestrator {
         t.state = DialogState.PRODUCTS;
         t.say("Подставил в форму: «" + purpose.label() + "», " + money(amount) + " на " + months(term) + ".");
         if (count == 0) {
-            t.say("Под эти условия продуктов нет, на странице есть подсказка, что изменить.");
+            t.say("Под эти условия продуктов нет, на странице есть подсказка, что изменить");
         } else {
             t.say("Подходящие продукты показаны на странице. Оформить заявку можно кнопкой на карточке продукта.");
         }
