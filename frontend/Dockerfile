@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Раздача статики и прокси к backend
-FROM nginx:1.28.0-alpine
+FROM nginx:1.31.0-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /src/dist /usr/share/nginx/html
 EXPOSE 80
