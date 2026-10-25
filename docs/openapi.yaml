@@ -1,0 +1,1827 @@
+openapi: 3.0.3
+info:
+  title: Умный кредитный кабинет предпринимателя
+  version: 1.0.0
+  description: API цифрового кредитного конвейера. Файл собран по коду контроллеров и DTO; при запущенном приложении актуальную
+    версию можно выгрузить командой из README.
+servers:
+- url: http://localhost:3000
+  description: через nginx
+- url: http://localhost:8081
+  description: backend напрямую
+security:
+- bearer: []
+paths:
+  /api/auth/login:
+    post:
+      tags:
+      - Вход
+      summary: Вход по логину и паролю
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400': &id002
+          $ref: '#/components/responses/BadRequest'
+        '401': &id001
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Слишком много неудачных попыток, заголовок Retry-After
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      security: []
+  /api/auth/me:
+    get:
+      tags:
+      - Вход
+      summary: Текущий пользователь
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401': *id001
+  /api/client/profile:
+    get:
+      tags:
+      - Клиент
+      summary: Профиль компании и финансовый снимок
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyProfile'
+        '401': *id001
+        '403': &id003
+          $ref: '#/components/responses/Forbidden'
+  /api/products:
+    get:
+      tags:
+      - Продукты
+      summary: Каталог продуктов
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '401': *id001
+  /api/products/purposes:
+    get:
+      tags:
+      - Продукты
+      summary: Справочник целей
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Purpose'
+        '401': *id001
+  /api/products/recommend:
+    post:
+      tags:
+      - Продукты
+      summary: Подбор продуктов с объяснением
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recommendation'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendRequest'
+  /api/assistant/config:
+    get:
+      tags:
+      - Помощник
+      summary: Включён ли помощник и пороги автоматических подсказок
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantConfig'
+        '401': *id001
+        '403': *id003
+  /api/assistant/messages:
+    post:
+      tags:
+      - Помощник
+      summary: Сообщение помощнику в свободной форме
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistantMessageRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantReply'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '404':
+          description: Помощник выключен (`ASSISTANT_ENABLED=false`)
+        '429':
+          description: Больше 20 сообщений в минуту, заголовок `Retry-After`
+  /api/assistant/actions:
+    post:
+      tags:
+      - Помощник
+      summary: Нажатие кнопки в ответе помощника
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistantActionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistantReply'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '429':
+          description: Больше 20 сообщений в минуту, заголовок `Retry-After`
+  /api/assistant/events:
+    post:
+      tags:
+      - Помощник
+      summary: Событие виджета для продуктовых метрик (без текста сообщений)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistantEvent'
+      responses:
+        '204':
+          description: Записано в журнал аудита
+        '400': *id002
+        '401': *id001
+        '403': *id003
+  /api/applications:
+    get:
+      tags:
+      - Заявки клиента
+      summary: Мои заявки
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApplicationSummary'
+        '401': *id001
+        '403': *id003
+    post:
+      tags:
+      - Заявки клиента
+      summary: Создать черновик
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDetail'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '409': &id005
+          $ref: '#/components/responses/Conflict'
+        '422': &id006
+          $ref: '#/components/responses/Unprocessable'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DraftRequest'
+  /api/applications/{id}:
+    get:
+      tags:
+      - Заявки клиента
+      summary: Заявка с историей и пояснением
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDetail'
+        '401': *id001
+        '403': *id003
+        '404': &id004
+          $ref: '#/components/responses/NotFound'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    put:
+      tags:
+      - Заявки клиента
+      summary: Обновить черновик
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDetail'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+        '422': *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DraftRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /api/applications/{id}/submit:
+    post:
+      tags:
+      - Заявки клиента
+      summary: Отправить заявку (асинхронно)
+      responses:
+        '202':
+          description: Принято в обработку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitResponse'
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+        '422': *id006
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /api/applications/{id}/documents:
+    post:
+      tags:
+      - Заявки клиента
+      summary: Загрузить документ
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                docType:
+                  type: string
+                  enum:
+                  - BANK_STATEMENT
+                  - FINANCIAL_REPORT
+                  - COLLATERAL
+                  - OTHER
+              required:
+              - file
+      responses:
+        '201':
+          description: Загружено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+  /api/applications/{id}/documents/{docId}:
+    get:
+      tags:
+      - Заявки клиента
+      summary: Скачать документ
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: docId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401': *id001
+        '403': *id003
+        '404': *id004
+  /api/applications/{id}/info-requests/{requestId}/answer:
+    post:
+      tags:
+      - Заявки клиента
+      summary: Ответить на запрос банка
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDetail'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+  /api/applications/{id}/offer/accept:
+    post:
+      tags:
+      - Заявки клиента
+      summary: Принять предложение
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDetail'
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /api/applications/{id}/offer/decline:
+    post:
+      tags:
+      - Заявки клиента
+      summary: Отклонить предложение
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDetail'
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /api/applications/{id}/sign:
+    post:
+      tags:
+      - Заявки клиента
+      summary: Подписать договор и выполнить симуляцию выдачи
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDetail'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+        '422': *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      description: 'Без `termsAccepted: true` ответ 422 TERMS_NOT_ACCEPTED. Сумма зачисляется на расчётный счёт компании.'
+  /api/client/activity:
+    get:
+      tags:
+      - Клиент
+      summary: 'История операций: зачисления и события по заявкам'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+        '401': *id001
+        '403': *id003
+  /api/feed:
+    get:
+      tags:
+      - Лента
+      summary: 'Лента «Для вас»: непрочитанные события и новости с датой'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeedCard'
+        '401': *id001
+        '403': *id003
+  /api/feed/{id}/read:
+    post:
+      tags:
+      - Лента
+      summary: Убрать карточку из ленты
+      responses:
+        '204':
+          description: Готово
+        '401': *id001
+        '403': *id003
+        '404': *id004
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^(event|news)-\d+$
+      description: 'Идентификатор карточки: `event-N` для события по заявке или `news-N` для новости и подсказки.'
+  /api/bank/tasks:
+    get:
+      tags:
+      - Рабочее место банка
+      summary: Очередь задач
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskListItem'
+        '401': *id001
+        '403': *id003
+      parameters:
+      - name: filter
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - active
+          - mine
+          - new
+          - postponed
+          - done
+          default: active
+  /api/bank/tasks/take-next:
+    post:
+      tags:
+      - Рабочее место банка
+      summary: Взять следующую задачу
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCard'
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+  /api/bank/tasks/{id}:
+    get:
+      tags:
+      - Рабочее место банка
+      summary: Карточка задачи
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCard'
+        '401': *id001
+        '403': *id003
+        '404': *id004
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /api/bank/tasks/{id}/take:
+    post:
+      tags:
+      - Рабочее место банка
+      summary: Взять задачу или вернуться к отложенной
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCard'
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /api/bank/tasks/{id}/checks/{code}:
+    put:
+      tags:
+      - Рабочее место банка
+      summary: Результат проверки
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCard'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+        '422': *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckUpdateRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/bank/tasks/{id}/recalculate:
+    post:
+      tags:
+      - Рабочее место банка
+      summary: Пересчёт скоринга
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecalculateResponse'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+        '422': *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecalculateRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /api/bank/tasks/{id}/decision:
+    post:
+      tags:
+      - Рабочее место банка
+      summary: Решение андеррайтера
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCard'
+        '400': *id002
+        '401': *id001
+        '403': *id003
+        '404': *id004
+        '409': *id005
+        '422': *id006
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+  /api/bank/applications/{applicationId}/documents/{docId}:
+    get:
+      tags:
+      - Рабочее место банка
+      summary: Скачать документ заявки
+      parameters:
+      - name: applicationId
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: docId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401': *id001
+        '403': *id003
+        '404': *id004
+  /api/dev/reset-demo:
+    post:
+      tags:
+      - Демо
+      summary: Сброс демо-данных (только профиль demo)
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+  /actuator/health:
+    get:
+      tags:
+      - Служебные
+      summary: Состояние сервиса
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+          example: INVALID_STATUS_TRANSITION
+        traceId:
+          type: string
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+    LoginRequest:
+      type: object
+      properties:
+        login:
+          type: string
+          example: romashka
+        password:
+          type: string
+          example: Demo#2026
+      required:
+      - login
+      - password
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        login:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+          enum:
+          - CLIENT
+          - UNDERWRITER
+        companyId:
+          type: integer
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresAt: &id008
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+    CompanyProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        inn:
+          type: string
+        name:
+          type: string
+        legalForm:
+          type: string
+          enum:
+          - IP
+          - OOO
+        legalFormLabel:
+          type: string
+        ogrn:
+          type: string
+        okvedCode:
+          type: string
+        okvedName:
+          type: string
+        industryRisk:
+          type: string
+          enum:
+          - LOW
+          - MEDIUM
+          - HIGH
+        registrationDate:
+          type: string
+          format: date
+        businessAgeMonths:
+          type: integer
+        employeesCount:
+          type: integer
+        taxSystem:
+          type: string
+        accountMasked:
+          type: string
+        monthsWithBank:
+          type: integer
+        annualTurnover: &id007
+          type: number
+          format: decimal
+        avgMonthlyTurnover: *id007
+        turnoverGrowthPct: *id007
+        existingMonthlyObligations: *id007
+        financialsAsOf:
+          type: string
+          format: date
+        accountBalance:
+          type: number
+          description: Остаток расчётного счёта (синтетический)
+    Purpose:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+          - WORKING_CAPITAL
+          - CASH_GAP
+          - PURCHASE
+          - EQUIPMENT
+          - TRANSPORT
+          - NEW_DIRECTION
+        label:
+          type: string
+    Product:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        purposes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Purpose'
+        minAmount: *id007
+        maxAmount: *id007
+        minTermMonths:
+          type: integer
+        maxTermMonths:
+          type: integer
+        requiresCollateral:
+          type: boolean
+        alwaysManual:
+          type: boolean
+        minAvgMonthlyTurnover: *id007
+        indicativeRateFromPct:
+          type: number
+    RecommendRequest:
+      type: object
+      properties:
+        purpose:
+          type: string
+          example: WORKING_CAPITAL
+        amount: *id007
+        termMonths:
+          type: integer
+      required:
+      - purpose
+      - amount
+      - termMonths
+    Recommendation:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        available:
+          type: boolean
+        relevance:
+          type: integer
+        fits:
+          type: array
+          items:
+            type: string
+        limits:
+          type: array
+          items:
+            type: string
+        indicativeRatePct:
+          type: number
+    DraftRequest:
+      type: object
+      properties:
+        productCode:
+          type: string
+          example: WORKING_EXPRESS
+        purpose:
+          type: string
+          example: WORKING_CAPITAL
+        amount: *id007
+        termMonths:
+          type: integer
+        monthlyObligationsDeclared: *id007
+        collateralDescription:
+          type: string
+        consentDataProcessing:
+          type: boolean
+        consentCreditBureau:
+          type: boolean
+        parentApplicationId:
+          type: integer
+      required:
+      - productCode
+      - purpose
+      - amount
+      - termMonths
+    NextStep:
+      type: object
+      properties:
+        title:
+          type: string
+        text:
+          type: string
+        action:
+          type: string
+          enum:
+          - CONTINUE_DRAFT
+          - WAIT
+          - ANSWER_REQUEST
+          - REVIEW_OFFER
+          - SIGN
+          - NONE
+          - NEW_APPLICATION
+    ApplicationSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          type: string
+          enum: &id009
+          - DRAFT
+          - SUBMITTED
+          - NEED_INFO
+          - SCORING
+          - MANUAL_REVIEW
+          - OFFER_MADE
+          - SIGNING
+          - ISSUED
+          - DECLINED
+          - CLOSED
+        statusLabel:
+          type: string
+        productCode:
+          type: string
+        productName:
+          type: string
+        requestedAmount: *id007
+        requestedTermMonths:
+          type: integer
+        createdAt: *id008
+        updatedAt: *id008
+        nextStep:
+          $ref: '#/components/schemas/NextStep'
+    HistoryEntry:
+      type: object
+      properties:
+        fromStatus:
+          type: string
+          enum: *id009
+        toStatus:
+          type: string
+          enum: *id009
+        toStatusLabel:
+          type: string
+        actorType:
+          type: string
+          enum:
+          - CLIENT
+          - BANK
+          - SYSTEM
+        actorLabel:
+          type: string
+        comment:
+          type: string
+        createdAt: *id008
+    InfoRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        source:
+          type: string
+          enum:
+          - SYSTEM
+          - BANK
+        text:
+          type: string
+        status:
+          type: string
+          enum:
+          - OPEN
+          - ANSWERED
+        clientAnswer:
+          type: string
+        createdAt: *id008
+        answeredAt: *id008
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+        docType:
+          type: string
+          enum:
+          - BANK_STATEMENT
+          - FINANCIAL_REPORT
+          - COLLATERAL
+          - OTHER
+        fileName:
+          type: string
+        sizeBytes:
+          type: integer
+        uploadedByRole:
+          type: string
+        uploadedAt: *id008
+        newForBank:
+          type: boolean
+    Offer:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+          enum:
+          - INITIAL
+          - COUNTER
+        amount: *id007
+        termMonths:
+          type: integer
+        ratePct: *id007
+        monthlyPayment: *id007
+        totalPayment: *id007
+        overpayment: *id007
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - ACCEPTED
+          - DECLINED
+          - SUPERSEDED
+        summary:
+          type: string
+        reasons:
+          type: array
+          items:
+            type: string
+        changes:
+          type: array
+          items:
+            type: string
+        createdAt: *id008
+    Factor:
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        value:
+          type: string
+        points:
+          type: integer
+        comment:
+          type: string
+    Disbursement:
+      type: object
+      properties:
+        amount: *id007
+        accountMasked:
+          type: string
+        executedAt: *id008
+        simulated:
+          type: boolean
+    ApplicationDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          type: string
+          enum: *id009
+        statusLabel:
+          type: string
+        finalStatus:
+          type: boolean
+        productCode:
+          type: string
+        productName:
+          type: string
+        requiresCollateral:
+          type: boolean
+        purpose:
+          type: string
+        purposeLabel:
+          type: string
+        requestedAmount: *id007
+        requestedTermMonths:
+          type: integer
+        monthlyObligationsDeclared: *id007
+        collateralDescription:
+          type: string
+        consentDataProcessing:
+          type: boolean
+        consentCreditBureau:
+          type: boolean
+        parentApplicationId:
+          type: integer
+        createdAt: *id008
+        updatedAt: *id008
+        submittedAt: *id008
+        nextStep:
+          $ref: '#/components/schemas/NextStep'
+        offer:
+          $ref: '#/components/schemas/ClientOffer'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryEntry'
+        infoRequests:
+          type: array
+          items:
+            $ref: '#/components/schemas/InfoRequest'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        disbursement:
+          $ref: '#/components/schemas/Disbursement'
+    SubmitResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          type: string
+          enum: *id009
+        statusLabel:
+          type: string
+        message:
+          type: string
+    AnswerRequest:
+      type: object
+      properties:
+        answer:
+          type: string
+        collateralDescription:
+          type: string
+      required:
+      - answer
+    FeedCard:
+      type: object
+      properties:
+        id:
+          type: string
+          example: event-12
+        type:
+          type: string
+          enum:
+          - NEWS
+          - TIP
+          - STATUS
+        title:
+          type: string
+        body:
+          type: string
+        reason:
+          type: string
+        relatedApplicationId:
+          type: integer
+        createdAt: *id008
+        read:
+          type: boolean
+    TaskListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        applicationId:
+          type: integer
+        applicationNumber:
+          type: string
+        companyName:
+          type: string
+        legalForm:
+          type: string
+        productCode:
+          type: string
+        productName:
+          type: string
+        amount: *id007
+        termMonths:
+          type: integer
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+        status:
+          type: string
+          enum:
+          - NEW
+          - IN_PROGRESS
+          - POSTPONED
+          - DONE
+        statusLabel:
+          type: string
+        assigneeId:
+          type: integer
+        assigneeName:
+          type: string
+        mine:
+          type: boolean
+        slaDueAt: *id008
+        overdue:
+          type: boolean
+        createdAt: *id008
+        repeat:
+          type: boolean
+        reasonCodes:
+          type: string
+        grade:
+          type: string
+        applicationStatus:
+          type: string
+          enum: *id009
+    Check:
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        goal:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - OK
+          - NEGATIVE
+          - NEEDS_INFO
+        comment:
+          type: string
+        updatedAt: *id008
+    ScoringRun:
+      type: object
+      properties:
+        runNo:
+          type: integer
+        totalScore:
+          type: integer
+        grade:
+          type: string
+        hardStop:
+          type: boolean
+        hardStopReason:
+          type: string
+        paymentLoad: *id007
+        trigger:
+          type: string
+          enum:
+          - INITIAL
+          - RECALC
+        createdBy:
+          type: string
+        createdAt: *id008
+        factors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Factor'
+        inputs:
+          type: object
+          additionalProperties: true
+    BankDecision:
+      type: object
+      properties:
+        result:
+          type: string
+        resultLabel:
+          type: string
+        comment:
+          type: string
+        decidedByName:
+          type: string
+        createdAt: *id008
+        counterOffer:
+          type: object
+          additionalProperties: true
+    ExternalCheck:
+      type: object
+      properties:
+        source:
+          type: string
+          enum:
+          - REGISTRY
+          - BUREAU
+          - TAX
+        sourceLabel:
+          type: string
+        status:
+          type: string
+          enum:
+          - OK
+          - UNAVAILABLE
+        payload:
+          type: object
+          additionalProperties: true
+        receivedAt: *id008
+    BankApplicationInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          type: string
+          enum: *id009
+        statusLabel:
+          type: string
+        productCode:
+          type: string
+        productName:
+          type: string
+        requiresCollateral:
+          type: boolean
+        productMinAmount: *id007
+        productMaxAmount: *id007
+        productMinTerm:
+          type: integer
+        productMaxTerm:
+          type: integer
+        purposeLabel:
+          type: string
+        requestedAmount: *id007
+        requestedTermMonths:
+          type: integer
+        monthlyObligationsDeclared: *id007
+        collateralDescription:
+          type: string
+        submittedAt: *id008
+        decisionSummary:
+          type: string
+    TaskCard:
+      type: object
+      properties:
+        task:
+          $ref: '#/components/schemas/TaskListItem'
+        application:
+          $ref: '#/components/schemas/BankApplicationInfo'
+        company:
+          $ref: '#/components/schemas/CompanyProfile'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        scoringRuns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoringRun'
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Check'
+        decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/BankDecision'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryEntry'
+        infoRequests:
+          type: array
+          items:
+            $ref: '#/components/schemas/InfoRequest'
+        externalChecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalCheck'
+        currentOffer:
+          $ref: '#/components/schemas/Offer'
+        canAct:
+          type: boolean
+        allowedResults:
+          type: array
+          items:
+            type: string
+            enum:
+            - APPROVE
+            - APPROVE_WITH_CHANGES
+            - REQUEST_INFO
+            - DECLINE
+            - POSTPONE
+    CheckUpdateRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - OK
+          - NEGATIVE
+          - NEEDS_INFO
+          - PENDING
+        comment:
+          type: string
+      required:
+      - status
+    RecalculateRequest:
+      type: object
+      properties:
+        confirmedAnnualTurnover: *id007
+        amount: *id007
+        termMonths:
+          type: integer
+    IndicativeTerms:
+      type: object
+      properties:
+        outcome:
+          type: string
+        outcomeLabel:
+          type: string
+        summary:
+          type: string
+        amount: *id007
+        termMonths:
+          type: integer
+        ratePct: *id007
+        monthlyPayment: *id007
+    RecalculateResponse:
+      type: object
+      properties:
+        run:
+          $ref: '#/components/schemas/ScoringRun'
+        indicative:
+          $ref: '#/components/schemas/IndicativeTerms'
+    DecisionRequest:
+      type: object
+      properties:
+        result:
+          type: string
+          enum:
+          - APPROVE
+          - APPROVE_WITH_CHANGES
+          - REQUEST_INFO
+          - DECLINE
+          - POSTPONE
+        comment:
+          type: string
+        requestText:
+          type: string
+        counterOffer:
+          type: object
+          properties:
+            amount: *id007
+            termMonths:
+              type: integer
+      required:
+      - result
+    ClientOffer:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+          enum:
+          - INITIAL
+          - COUNTER
+        amount: &id010
+          type: number
+          format: decimal
+        termMonths:
+          type: integer
+        ratePct: *id010
+        monthlyPayment: *id010
+        totalPayment: *id010
+        overpayment: *id010
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - ACCEPTED
+          - DECLINED
+          - SUPERSEDED
+        summary:
+          type: string
+        changes:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+      description: 'Предложение для клиента: условия и что изменилось относительно заявки, без внутренних причин решения'
+    SignRequest:
+      type: object
+      properties:
+        termsAccepted:
+          type: boolean
+          description: Клиент ознакомился с условиями договора
+      required:
+      - termsAccepted
+    Activity:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - CREDIT
+          - STATUS
+        title:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+        applicationId:
+          type: integer
+        applicationNumber:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    AssistantSlots:
+      type: object
+      properties:
+        purpose:
+          type: string
+          enum: [WORKING_CAPITAL, CASH_GAP, PURCHASE, EQUIPMENT, TRANSPORT, NEW_DIRECTION]
+        amount:
+          type: integer
+        termMonths:
+          type: integer
+        termHint:
+          type: integer
+        productCode:
+          type: string
+    AssistantPage:
+      type: object
+      properties:
+        page:
+          type: string
+          enum: [HOME, NEED, WIZARD, APPLICATION, HISTORY, BENEFITS, OTHER]
+        wizardStep:
+          type: integer
+          minimum: 0
+          maximum: 3
+        applicationStatus:
+          type: string
+        offerKind:
+          type: string
+        purpose:
+          type: string
+        amount:
+          type: integer
+        termMonths:
+          type: integer
+        productCode:
+          type: string
+    AssistantMessageRequest:
+      type: object
+      required: [text]
+      properties:
+        state:
+          type: string
+        slots:
+          $ref: '#/components/schemas/AssistantSlots'
+        page:
+          $ref: '#/components/schemas/AssistantPage'
+        text:
+          type: string
+          maxLength: 1000
+    AssistantActionRequest:
+      type: object
+      required: [action]
+      properties:
+        state:
+          type: string
+        slots:
+          $ref: '#/components/schemas/AssistantSlots'
+        page:
+          $ref: '#/components/schemas/AssistantPage'
+        action:
+          type: string
+          enum: [START, PURPOSE, PURPOSE_FREE, HORIZON, AMOUNT, AMOUNT_HELP, CHANGE_AMOUNT, TERM, TERM_HELP, CHANGE_TERM,
+            FILL_FORM, COMPARE, SELECT_PRODUCT, KB, GO_NEED, HIGHLIGHT]
+        params:
+          type: object
+          additionalProperties:
+            type: string
+    AssistantReply:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [GREETING, PURPOSE, PURPOSE_DETAIL, AMOUNT, TERM, SUMMARY, PRODUCTS, COMPARE, WIZARD_HELP, APPLICATION_HELP]
+        slots:
+          $ref: '#/components/schemas/AssistantSlots'
+        text:
+          type: string
+        terms:
+          type: array
+          items:
+            type: object
+            properties:
+              termMonths:
+                type: integer
+              monthlyPayment:
+                type: number
+              overpayment:
+                type: number
+              recommended:
+                type: boolean
+        buttons:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              action:
+                type: string
+              params:
+                type: object
+                additionalProperties:
+                  type: string
+        ui:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [FILL_NEED_FORM, OPEN_WIZARD, NAVIGATE, HIGHLIGHT]
+              params:
+                type: object
+                additionalProperties:
+                  type: string
+        sources:
+          type: array
+          description: идентификаторы фрагментов базы знаний, на которых построен ответ
+          items:
+            type: string
+    AssistantEvent:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [OPENED, OFFER_SHOWN, OFFER_ACCEPTED, OFFER_DISMISSED]
+        signal:
+          type: string
+          pattern: ^[A-Z_]*$
+        page:
+          type: string
+        entry:
+          type: string
+          pattern: ^[A-Z_]*$
+    AssistantConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        proactive:
+          type: boolean
+        idleSeconds:
+          type: integer
+        purposeChanges:
+          type: integer
+        valueChanges:
+          type: integer
+        recommendationsSeconds:
+          type: integer
+        wizardIdleSeconds:
+          type: integer
+        validationRepeats:
+          type: integer
+        maxOffersPerSession:
+          type: integer
+  responses:
+    BadRequest:
+      description: Ошибка в данных
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: Нет или истёк токен
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: Недостаточно прав
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Не найдено (в том числе чужая заявка)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Conflict:
+      description: Недопустимый переход статуса или конфликт версий
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unprocessable:
+      description: Нарушено бизнес-правило
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'

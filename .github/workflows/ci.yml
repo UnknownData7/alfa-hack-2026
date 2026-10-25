@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (юнит- и интеграционные тесты)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Тесты (Testcontainers поднимает PostgreSQL)
+        run: ./mvnw -B -ntp verify 2>&1 | tee maven.log; test ${PIPESTATUS[0]} -eq 0
+        shell: bash
+      - name: Причины падения в аннотациях
+        if: failure()
+        shell: bash
+        run: |
+          grep -E '^\[ERROR\]' maven.log | grep -v -E 'To see the full|Re-run Maven|^\[ERROR\] *$|-> \[Help' | head -30 \
+            | sed 's/%/%25/g' | head -4 | while IFS= read -r line; do echo "::error title=maven::${line}"; done
+          grep -h -o 'Caused by: .*' target/surefire-reports/* 2>/dev/null | cut -c1-400 | sort | uniq -c | sort -rn | head -6 \
+            | sed 's/%/%25/g' | while IFS= read -r line; do echo "::error title=cause::${line}"; done
+      - name: Отчёты тестов
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports
+          retention-days: 7
+
+  frontend:
+    name: Frontend (типы, тесты, сборка)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    name: Сборка образов и смоук-тест
+    runs-on: ubuntu-24.04
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Запуск стенда
+        run: |
+          cp .env.example .env
+          docker compose up --build -d
+          for i in $(seq 1 60); do
+            curl -fs http://localhost:3000/actuator/health | grep -q UP && break
+            sleep 5
+          done
+          docker compose ps
+      - name: Смоук-тест API через Newman
+        run: npx -y newman@6 run postman/collection.json -e postman/environment.json --working-dir . --delay-request 200
+      - name: Заголовки безопасности и метрики
+        run: |
+          curl -sI http://localhost:3000/ | tee headers.txt
+          grep -qi '^x-content-type-options: nosniff' headers.txt
+          grep -qi '^x-frame-options: DENY' headers.txt
+          grep -qi '^content-security-policy:' headers.txt
+          ! grep -qi '^server: nginx/' headers.txt
+          # Метрики доступны только на служебном порту внутри сети стенда
+          docker compose exec -T backend wget -qO- http://localhost:8090/actuator/prometheus | grep -q '^credit_applications_submitted_total'
+          ! curl -fs http://localhost:3000/actuator/prometheus
+      - name: Логи при ошибке
+        if: failure()
+        run: docker compose logs --no-color --tail 300

@@ -1,0 +1,2452 @@
+{
+  "info": {
+    "name": "Умный кредитный кабинет: API",
+    "description": "Сквозные сценарии S1, S2, S4, S5 и проверка ролей. Перед прогоном коллекция сбрасывает демо-данные (профиль demo). Запуск: newman run postman/collection.json -e postman/environment.json --working-dir .",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Подготовка",
+      "item": [
+        {
+          "name": "Сброс демо-данных",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dev/reset-demo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dev",
+                "reset-demo"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Доступ и роли",
+      "item": [
+        {
+          "name": "Без токена: 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Неверный пароль: 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"romashka\",\n  \"password\": \"wrong\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Вход: romashka",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"romashka\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 и токен', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().token).to.be.a('string'); });",
+                  "pm.collectionVariables.set('tokenRomashka', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Вход: uw1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"uw1\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 и токен', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().token).to.be.a('string'); });",
+                  "pm.collectionVariables.set('tokenUw1', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Кто я (андеррайтер)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('роль UNDERWRITER', () => pm.expect(pm.response.json().role).to.eql('UNDERWRITER'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Клиент на банковском эндпоинте: 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bank/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bank",
+                "tasks"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Андеррайтер на клиентском эндпоинте: 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. S1: автоодобрение и выдача (romashka)",
+      "item": [
+        {
+          "name": "Профиль компании",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/client/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "client",
+                "profile"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('компания', () => pm.expect(pm.response.json().inn).to.eql('7701000001'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Каталог продуктов",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('три продукта', () => pm.expect(pm.response.json().length).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Подбор продукта",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/recommend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "recommend"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purpose\": \"WORKING_CAPITAL\",\n  \"amount\": 1200000,\n  \"termMonths\": 9\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('первым идёт «Оборотный экспресс»', () => pm.expect(r[0].code).to.eql('WORKING_EXPRESS'));",
+                  "pm.test('есть объяснение', () => pm.expect(r[0].fits.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Создать черновик",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productCode\": \"WORKING_EXPRESS\",\n  \"purpose\": \"WORKING_CAPITAL\",\n  \"amount\": 1200000,\n  \"termMonths\": 9,\n  \"consentDataProcessing\": true,\n  \"consentCreditBureau\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 и статус DRAFT', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().status).to.eql('DRAFT'); });",
+                  "pm.collectionVariables.set('s1Id', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Загрузить выписку",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s1Id}}",
+                "documents"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/files/statement.pdf"
+                },
+                {
+                  "key": "docType",
+                  "value": "BANK_STATEMENT",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Отправить заявку",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s1Id}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('202 Accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Повторная отправка: 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s1Id}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Статус после обработки: OFFER_MADE",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s1Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s1Id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const a = pm.response.json();",
+                  "pm.test('статус OFFER_MADE', () => pm.expect(a.status).to.eql('OFFER_MADE'));",
+                  "pm.test('предложение на запрошенных условиях', () => { pm.expect(a.offer.kind).to.eql('INITIAL'); pm.expect(Number(a.offer.amount)).to.eql(1200000); });",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 4000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Принять предложение",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/offer/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s1Id}}",
+                "offer",
+                "accept"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('SIGNING', () => pm.expect(pm.response.json().status).to.eql('SIGNING'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Подписание без согласия с условиями: 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s1Id}}",
+                "sign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"termsAccepted\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Подписать договор: выдача",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s1Id}}/sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s1Id}}",
+                "sign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"termsAccepted\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const a = pm.response.json();",
+                  "pm.test('ISSUED', () => pm.expect(a.status).to.eql('ISSUED'));",
+                  "pm.test('выдача смоделирована', () => pm.expect(a.disbursement.simulated).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Остаток счёта после зачисления",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/client/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "client",
+                "profile"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('остаток счёта больше суммы кредита', () => pm.expect(Number(pm.response.json().accountBalance)).to.be.above(1200000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "История операций: зачисление",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/client/activity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "client",
+                "activity"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('первой идёт операция зачисления', () => pm.expect(pm.response.json()[0].type).to.eql('CREDIT'));",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Лента: событие о выдаче",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('есть событие', () => pm.expect(JSON.stringify(pm.response.json())).to.include('Кредит выдан'));",
+                  "pm.test('у карточек есть дата', () => pm.response.json().forEach(card => pm.expect(card.createdAt).to.be.a('string')));",
+                  "pm.collectionVariables.set('feedCardId', pm.response.json()[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Прочитано: карточка убирается",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed/{{feedCardId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed",
+                "{{feedCardId}}",
+                "read"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Лента без прочитанной карточки",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRomashka}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "feed"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('карточки больше нет', () => pm.expect(pm.response.json().map(c => c.id)).to.not.include(pm.collectionVariables.get('feedCardId')));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. S2: встречное предложение (sokolov)",
+      "item": [
+        {
+          "name": "Вход: sokolov",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"sokolov\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 и токен', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().token).to.be.a('string'); });",
+                  "pm.collectionVariables.set('tokenSokolov', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Создать черновик",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenSokolov}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productCode\": \"WORKING_EXPRESS\",\n  \"purpose\": \"WORKING_CAPITAL\",\n  \"amount\": 1400000,\n  \"termMonths\": 6,\n  \"consentDataProcessing\": true,\n  \"consentCreditBureau\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 и статус DRAFT', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().status).to.eql('DRAFT'); });",
+                  "pm.collectionVariables.set('s2Id', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Загрузить выписку",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenSokolov}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s2Id}}/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s2Id}}",
+                "documents"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/files/statement.pdf"
+                },
+                {
+                  "key": "docType",
+                  "value": "BANK_STATEMENT",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Отправить заявку",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenSokolov}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s2Id}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s2Id}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('202 Accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Статус после обработки: OFFER_MADE",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenSokolov}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s2Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s2Id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const a = pm.response.json();",
+                  "pm.test('статус OFFER_MADE', () => pm.expect(a.status).to.eql('OFFER_MADE'));",
+                  "pm.test('встречное на меньшую сумму', () => { pm.expect(a.offer.kind).to.eql('COUNTER'); pm.expect(Number(a.offer.amount)).to.be.below(1400000); });",
+                  "pm.test('объяснено, что изменилось', () => pm.expect(a.offer.changes.length).to.be.above(0));",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 4000);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. S5: автоотказ (vector-opt)",
+      "item": [
+        {
+          "name": "Вход: vector-opt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"vector-opt\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 и токен', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().token).to.be.a('string'); });",
+                  "pm.collectionVariables.set('tokenVector', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Создать черновик",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenVector}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productCode\": \"WORKING_EXPRESS\",\n  \"purpose\": \"WORKING_CAPITAL\",\n  \"amount\": 2000000,\n  \"termMonths\": 12,\n  \"consentDataProcessing\": true,\n  \"consentCreditBureau\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 и статус DRAFT', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().status).to.eql('DRAFT'); });",
+                  "pm.collectionVariables.set('s5Id', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Загрузить выписку",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenVector}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s5Id}}/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s5Id}}",
+                "documents"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/files/statement.pdf"
+                },
+                {
+                  "key": "docType",
+                  "value": "BANK_STATEMENT",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Отправить заявку",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenVector}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s5Id}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s5Id}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('202 Accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Статус после обработки: DECLINED",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenVector}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s5Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s5Id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const a = pm.response.json();",
+                  "pm.test('статус DECLINED', () => pm.expect(a.status).to.eql('DECLINED'));",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });",
+                  "pm.test('предложено подать новую заявку', () => pm.expect(a.nextStep.action).to.eql('NEW_APPLICATION'));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 4000);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. S4: ручная проверка и запрос данных (kim, uw1)",
+      "item": [
+        {
+          "name": "Вход: kim",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"kim\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 и токен', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().token).to.be.a('string'); });",
+                  "pm.collectionVariables.set('tokenKim', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Создать черновик",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productCode\": \"WORKING_EXPRESS\",\n  \"purpose\": \"WORKING_CAPITAL\",\n  \"amount\": 800000,\n  \"termMonths\": 6,\n  \"consentDataProcessing\": true,\n  \"consentCreditBureau\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 и статус DRAFT', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().status).to.eql('DRAFT'); });",
+                  "pm.collectionVariables.set('s4Id', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Загрузить выписку",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s4Id}}/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s4Id}}",
+                "documents"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/files/statement.pdf"
+                },
+                {
+                  "key": "docType",
+                  "value": "BANK_STATEMENT",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Отправить заявку",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s4Id}}/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s4Id}}",
+                "submit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('202 Accepted', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Статус после обработки: MANUAL_REVIEW",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s4Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s4Id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const a = pm.response.json();",
+                  "pm.test('статус MANUAL_REVIEW', () => pm.expect(a.status).to.eql('MANUAL_REVIEW'));",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 4000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Очередь задач",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bank/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bank",
+                "tasks"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('есть задачи', () => pm.expect(pm.response.json().length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Взять следующую задачу",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bank/tasks/take-next",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bank",
+                "tasks",
+                "take-next"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const c = pm.response.json();",
+                  "pm.test('взята задача по заявке kim', () => pm.expect(c.application.id).to.eql(Number(pm.collectionVariables.get('s4Id'))));",
+                  "pm.collectionVariables.set('s4Task', c.task.id);",
+                  "pm.collectionVariables.set('s4Check', c.checks[0].code);",
+                  "pm.collectionVariables.set('s4Checks', JSON.stringify(c.checks.map(x => x.code)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Решение без проверок: 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bank/tasks/{{s4Task}}/decision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bank",
+                "tasks",
+                "{{s4Task}}",
+                "decision"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\": \"APPROVE\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Проверки: нужны данные",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bank/tasks/{{s4Task}}/checks/{{s4Check}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bank",
+                "tasks",
+                "{{s4Task}}",
+                "checks",
+                "{{s4Check}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"NEEDS_INFO\",\n  \"comment\": \"Нужна выписка за 12 месяцев\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Остальные проверки заполняются тем же результатом",
+                  "const codes = JSON.parse(pm.collectionVariables.get('s4Checks')).slice(1);",
+                  "codes.forEach(code => pm.sendRequest({ url: pm.variables.get('baseUrl') + '/api/bank/tasks/' + pm.collectionVariables.get('s4Task') + '/checks/' + code,",
+                  "  method: 'PUT', header: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + pm.collectionVariables.get('tokenUw1') },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ status: 'NEEDS_INFO', comment: 'Нужна выписка за 12 месяцев' }) } }, () => {}));",
+                  "setTimeout(() => {}, 1000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Запросить данные у клиента",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bank/tasks/{{s4Task}}/decision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bank",
+                "tasks",
+                "{{s4Task}}",
+                "decision"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\": \"REQUEST_INFO\",\n  \"requestText\": \"Приложите выписку по счёту за 12 месяцев\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Клиент видит запрос",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s4Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s4Id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const a = pm.response.json();",
+                  "pm.test('NEED_INFO', () => pm.expect(a.status).to.eql('NEED_INFO'));",
+                  "pm.collectionVariables.set('s4Request', a.infoRequests.find(r => r.status === 'OPEN').id);",
+                  "pm.test('клиенту не видна внутренняя оценка', () => { const s = pm.response.text(); ['\"decision\"','\"grade\"','\"factors\"','\"reasons\"','\"totalScore\"','\"reasonCode\"'].forEach(f => pm.expect(s).to.not.include(f)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Загрузить выписку",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s4Id}}/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s4Id}}",
+                "documents"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "postman/files/statement.pdf"
+                },
+                {
+                  "key": "docType",
+                  "value": "BANK_STATEMENT",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ответ клиента",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{s4Id}}/info-requests/{{s4Request}}/answer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "applications",
+                "{{s4Id}}",
+                "info-requests",
+                "{{s4Request}}",
+                "answer"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answer\": \"Выписка приложена, выручка сезонная\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Повторная задача у того же андеррайтера",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bank/tasks?filter=new",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bank",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "filter",
+                  "value": "new"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.response.json().find(x => x.applicationId === Number(pm.collectionVariables.get('s4Id')));",
+                  "pm.test('приоритет 1 и назначена uw1', () => { pm.expect(t.priority).to.eql(1); pm.expect(t.mine).to.eql(true); pm.expect(t.repeat).to.eql(true); });",
+                  "pm.collectionVariables.set('s4Repeat', t.id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 4000);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Взять повторную задачу",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bank/tasks/{{s4Repeat}}/take",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bank",
+                "tasks",
+                "{{s4Repeat}}",
+                "take"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('новый документ подсвечен', () => pm.expect(pm.response.json().documents.some(d => d.newForBank)).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Пересчёт с подтверждённым оборотом",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/bank/tasks/{{s4Repeat}}/recalculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bank",
+                "tasks",
+                "{{s4Repeat}}",
+                "recalculate"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmedAnnualTurnover\": 4800000\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('новый запуск скоринга', () => pm.expect(pm.response.json().run.trigger).to.eql('RECALC'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Помощник клиента (kim)",
+      "item": [
+        {
+          "name": "Настройки помощника",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "config"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, помощник включён', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().enabled).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Свободный текст: цель, сумма и варианты срока",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": {\n    \"page\": \"NEED\"\n  },\n  \"text\": \"нужно 400 тысяч, чтобы закрыть аренду, пока не пришла оплата от заказчика\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('цель понята как кассовый разрыв', () => pm.expect(r.slots.purpose).to.eql('CASH_GAP'));",
+                  "pm.test('три варианта срока с платежом и переплатой', () => { pm.expect(r.terms.length).to.eql(3); r.terms.forEach(t => { pm.expect(t.monthlyPayment).to.be.above(0); pm.expect(t.overpayment).to.be.above(0); }); });",
+                  "const fill = r.buttons.find(b => b.action === 'FILL_FORM' && b.params.term === '6');",
+                  "pm.test('есть кнопка «Подставить» на 6 месяцев', () => pm.expect(fill).to.be.an('object'));",
+                  "pm.collectionVariables.set('asState', r.state);",
+                  "pm.collectionVariables.set('asSlots', JSON.stringify(r.slots));",
+                  "pm.collectionVariables.set('asParams', JSON.stringify(fill ? fill.params : {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Кнопка «Подставить в форму»",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/actions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "actions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"state\": \"{{asState}}\",\n  \"slots\": {{asSlots}},\n  \"page\": { \"page\": \"NEED\" },\n  \"action\": \"FILL_FORM\",\n  \"params\": {{asParams}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('помощник заполняет форму подбора, заявку не создаёт', () => pm.expect(pm.response.json().ui[0].type).to.eql('FILL_NEED_FORM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Вопрос из базы знаний",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Зачем нужно согласие на запрос в бюро?\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ответ из базы знаний', () => pm.expect(pm.response.json().sources[0]).to.eql('faq.bureau-consent'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Вопрос не по теме: вежливый отказ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Какой сейчас курс доллара?\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('отказ по политике', () => pm.expect(pm.response.json().sources[0]).to.eql('policy.off-topic'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Вопрос о скоринге: внутренняя оценка не раскрывается",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Какой у меня скоринговый балл и почему отказали?\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('ответ по политике о решении', () => pm.expect(r.sources[0]).to.eql('policy.decision'));",
+                  "pm.test('в ответе нет баллов и грейда', () => { const t = r.text.toLowerCase(); pm.expect(t).to.not.include('грейд'); pm.expect(t).to.not.match(/\\d+ балл/); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Андеррайтер не может пользоваться помощником: 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"привет\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "tokenRomashka",
+      "value": ""
+    },
+    {
+      "key": "tokenUw1",
+      "value": ""
+    },
+    {
+      "key": "tokenSokolov",
+      "value": ""
+    },
+    {
+      "key": "tokenVector",
+      "value": ""
+    },
+    {
+      "key": "tokenKim",
+      "value": ""
+    },
+    {
+      "key": "s1Id",
+      "value": ""
+    },
+    {
+      "key": "s2Id",
+      "value": ""
+    },
+    {
+      "key": "s5Id",
+      "value": ""
+    },
+    {
+      "key": "s4Id",
+      "value": ""
+    },
+    {
+      "key": "s4Task",
+      "value": ""
+    },
+    {
+      "key": "s4Check",
+      "value": ""
+    },
+    {
+      "key": "s4Checks",
+      "value": ""
+    },
+    {
+      "key": "s4Request",
+      "value": ""
+    },
+    {
+      "key": "s4Repeat",
+      "value": ""
+    },
+    {
+      "key": "feedCardId",
+      "value": ""
+    },
+    {
+      "key": "asState",
+      "value": ""
+    },
+    {
+      "key": "asSlots",
+      "value": ""
+    },
+    {
+      "key": "asParams",
+      "value": ""
+    }
+  ]
+}

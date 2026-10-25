@@ -1,0 +1,67 @@
+name: credit-cabinet
+
+services:
+  db:
+    image: postgres:16.10-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-credit}
+      POSTGRES_USER: ${POSTGRES_USER:-credit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    mem_limit: 512m
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-demo}
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-credit}
+      DB_USER: ${POSTGRES_USER:-credit}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET в .env}
+      JWT_TTL_MINUTES: ${JWT_TTL_MINUTES:-60}
+      KEY_RATE_PERCENT: ${KEY_RATE_PERCENT:-14.0}
+      PIPELINE_STEP_DELAY_MS: ${PIPELINE_STEP_DELAY_MS:-800}
+      MOCK_LATENCY_MS: ${MOCK_LATENCY_MS:-200}
+      MOCK_UNAVAILABLE_SOURCES: ${MOCK_UNAVAILABLE_SOURCES:-}
+      TASK_SLA_HOURS: ${TASK_SLA_HOURS:-4}
+      UPLOAD_DIR: /data/uploads
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms128m -Xmx512m}
+      MANAGEMENT_PORT: 8090
+      LOGIN_MAX_ATTEMPTS: ${LOGIN_MAX_ATTEMPTS:-5}
+      LOGIN_WINDOW_MINUTES: ${LOGIN_WINDOW_MINUTES:-15}
+      ASSISTANT_ENABLED: ${ASSISTANT_ENABLED:-true}
+      ASSISTANT_PROACTIVE: ${ASSISTANT_PROACTIVE:-true}
+      ASSISTANT_IDLE_SECONDS: ${ASSISTANT_IDLE_SECONDS:-20}
+      # Логи в формате ECS JSON для систем сбора логов
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ${LOG_FORMAT:-ecs}
+    volumes:
+      - uploads:/data/uploads
+    ports:
+      - "${BACKEND_PORT:-8081}:8080"
+    mem_limit: 768m
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    mem_limit: 128m
+
+volumes:
+  pgdata:
+  uploads:

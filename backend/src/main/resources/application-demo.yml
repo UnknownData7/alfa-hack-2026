@@ -1,0 +1,5 @@
+# Профиль demo: синтетические данные засеваются при первом старте, доступен сброс демо-данных
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/demo
+    clean-disabled: false
