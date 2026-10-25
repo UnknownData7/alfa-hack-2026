@@ -1,9 +1,0 @@
-{$SITE_DOMAIN} {
-	encode gzip
-
-	# Сброс демо-данных доступен только с самого сервера (см. docs/DEPLOY.md)
-	@dev path /api/dev/*
-	respond @dev 404
-
-	reverse_proxy frontend:80
-}
