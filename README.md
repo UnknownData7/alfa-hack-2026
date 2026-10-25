@@ -1,5 +1,19 @@
 # Умный кредитный кабинет предпринимателя
 
+**Команда «Пока без названия»**, хакатон «Альфа Будущее»
+
+Презентация решения: [`docs/presentation.pdf`](docs/presentation.pdf)
+
+| Участник | Почта | Telegram |
+|---|---|---|
+| Бондаренко Григорий Александрович | [grisha.bondarenko76@gmail.com](mailto:grisha.bondarenko76@gmail.com) | [@Bondarenko_Gregory](https://t.me/Bondarenko_Gregory) |
+| Чиликин Александр Александрович | [alchula789@gmail.com](mailto:alchula789@gmail.com) | [@alexchilikin](https://t.me/alexchilikin) |
+| Шкодин Роман Владимирович | [romanshkodin.ru@gmail.com](mailto:romanshkodin.ru@gmail.com) | [@UnknownData7](https://t.me/UnknownData7) |
+
+Быстрый старт: `cp .env.example .env && docker compose up --build`, затем http://localhost:3000, вход `romashka` или `kim`, пароль `Demo#2026`.
+
+---
+
 Прототип цифрового кредитного конвейера для малого и микробизнеса. В одном продукте соединены клиентский путь (подбор продукта, заявка, предложение, подписание, выдача) и обработка заявки банком (проверка полноты, обогащение данными внешних источников, скоринг, кредитное решение, ручная проверка андеррайтером). Решение подготовлено для хакатона «Альфа Будущее».
 
 Все данные синтетические, внешние системы (реестр компаний, БКИ, ФНС, выдача) заменены локальными моками. Интернет нужен только для первой сборки образов.
@@ -189,6 +203,7 @@ npx newman run postman/collection.json -e postman/environment.json --working-dir
 
 | Документ | Содержание |
 |---|---|
+| [`docs/presentation.pdf`](docs/presentation.pdf) | презентация решения для защиты |
 | [`docs/API.md`](docs/API.md) | группы эндпоинтов, ошибки, примеры |
 | [`docs/DEPLOY.md`](docs/DEPLOY.md) | развёртывание на сервере с HTTPS |
 | [`docs/openapi.yaml`](docs/openapi.yaml) | спецификация OpenAPI 3 |
