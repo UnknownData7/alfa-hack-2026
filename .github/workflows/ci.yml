@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, v2, v3, stage-0-skeleton]
+    branches: [main, v2, v3, v4, stage-0-skeleton]
   pull_request:
 
 permissions:
