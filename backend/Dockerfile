@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn -B -q -DskipTests package
 
 # Запуск
-FROM eclipse-temurin:21.0.8_9-jre-alpine
+FROM eclipse-temurin:24.0.2_12-jre-alpine
 RUN addgroup -S app && adduser -S app -G app \
     && mkdir -p /data/uploads && chown -R app:app /data
 WORKDIR /app
