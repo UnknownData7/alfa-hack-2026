@@ -54,6 +54,7 @@
 | maven (этап сборки) | 3.9.11-eclipse-temurin-21 | Apache License 2.0 |
 | node (этап сборки) | 22.20.0-alpine | MIT |
 | nginx | 1.28.0-alpine | BSD 2-Clause |
+| caddy (только серверный вариант, HTTPS) | 2.11.6-alpine | Apache License 2.0 |
 
 ## Инструменты проверки (не входят в поставку)
 
@@ -63,6 +64,14 @@
 | Maven Wrapper | Apache License 2.0 | запуск Maven 3.9.11 без предустановки (`backend/mvnw`) |
 | GitHub Actions: checkout, setup-java, setup-node, upload-artifact (v5) | MIT | CI: тесты, сборка, смоук-тест |
 | Dependabot | сервис GitHub | предложения обновлений зависимостей |
+
+## Сервисы для облачного стенда (не нужны для локального запуска)
+
+| Сервис | Условия | Назначение |
+|---|---|---|
+| sslip.io | бесплатный | доменное имя вида `<IP>.sslip.io` для сервера без своего домена |
+| Let's Encrypt | бесплатный | сертификат HTTPS, выпускает Caddy автоматически |
+| mirror.gcr.io | бесплатный | зеркало Docker Hub, подключается установщиком, только если Docker Hub недоступен |
 
 ## Смоделированные интеграции
 

@@ -2,6 +2,7 @@
 # Установка и обновление стенда на чистом сервере Ubuntu 22.04 или 24.04. Запуск от root:
 #   curl -fsSL https://raw.githubusercontent.com/UnknownData7/alfa-hack-2026/main/deploy/install.sh | bash
 # Домен по умолчанию: <IP>.sslip.io, свой домен можно передать: ... | SITE_DOMAIN=demo.example.ru bash
+# Подробно: docs/DEPLOY.md
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/UnknownData7/alfa-hack-2026.git}"
@@ -36,9 +37,10 @@ fi
 
 log "Код: $REPO_URL ($BRANCH) в $APP_DIR"
 if [ -d "$APP_DIR/.git" ]; then
-  git -C "$APP_DIR" fetch -q origin "$BRANCH"
-  git -C "$APP_DIR" checkout -q "$BRANCH"
-  git -C "$APP_DIR" reset -q --hard "origin/$BRANCH"
+  # BRANCH может быть веткой или тегом
+  git -C "$APP_DIR" fetch -q --tags origin
+  target="$(git -C "$APP_DIR" rev-parse -q --verify "origin/$BRANCH" || git -C "$APP_DIR" rev-parse "$BRANCH")"
+  git -C "$APP_DIR" checkout -q --detach "$target"
 else
   git clone -q --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
 fi
