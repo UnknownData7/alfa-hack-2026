@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/** Границы порогов каждого фактора (бриф, раздел 7). */
+/** Границы порогов каждого фактора (docs/CREDIT_RULES.md). */
 class ScoringEngineTest {
 
     private final ScoringEngine engine = new ScoringEngine();

@@ -13,7 +13,7 @@ import ru.hackathon.credit.scoring.Factor;
 import ru.hackathon.credit.scoring.Grade;
 import ru.hackathon.credit.scoring.ScoringOutcome;
 
-/** Порядок правил кредитной логики (бриф, раздел 7). */
+/** Порядок правил кредитной логики (docs/CREDIT_RULES.md). */
 class CreditDecisionEngineTest {
 
     private final CreditDecisionEngine engine = new CreditDecisionEngine(new PricingCalculator(15.0));

@@ -67,7 +67,7 @@ import ru.hackathon.credit.task.BankDtos.TaskCard;
 import ru.hackathon.credit.task.BankDtos.TaskListItem;
 
 /**
- * Рабочее место андеррайтера: очередь, карточка заявки, пересчёт скоринга и решения по правилам раздела 8 брифа.
+ * Рабочее место андеррайтера: очередь, карточка заявки, пересчёт скоринга и решения по правилам docs/CREDIT_RULES.md, раздел 5.
  */
 @Service
 public class UnderwritingService {
@@ -392,7 +392,7 @@ public class UnderwritingService {
         return card(taskId, userId);
     }
 
-    /** Правила завершения задачи (бриф, раздел 8). */
+    /** Правила завершения задачи (docs/CREDIT_RULES.md, раздел 5). */
     static List<String> allowedResults(List<TaskCheck> checks) {
         boolean pending = checks.stream().anyMatch(c -> TaskCheck.PENDING.equals(c.getStatus()));
         boolean negative = checks.stream().anyMatch(c -> TaskCheck.NEGATIVE.equals(c.getStatus()));
