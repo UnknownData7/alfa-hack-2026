@@ -185,7 +185,8 @@ npx newman run postman/collection.json -e postman/environment.json --working-dir
 | [`docs/research/`](docs/research/README.md) | исследование: методология, портреты, выводы по клиентам и андеррайтерам, связь выводов с продуктом |
 | [`docs/PRODUCT_DECISIONS.md`](docs/PRODUCT_DECISIONS.md) | границы MVP, связь потребностей и функций, что видит клиент |
 | [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) | допущения, описание моков |
-| [`docs/PRODUCTION_ROADMAP.md`](docs/PRODUCTION_ROADMAP.md) | путь к промышленной версии |
+| [`docs/METRICS.md`](docs/METRICS.md) | дерево метрик продукта и где их взять в прототипе |
+| [`docs/PRODUCTION_ROADMAP.md`](docs/PRODUCTION_ROADMAP.md) | путь к промышленной версии и доработки по исследованию |
 | [`docs/AI_ASSISTANT_CONCEPT.md`](docs/AI_ASSISTANT_CONCEPT.md) | помощник по подбору и оформлению кредита: концепция, реализованный сценарный слой, варианты модели |
 
 Обновить `docs/openapi.yaml` из запущенного приложения:

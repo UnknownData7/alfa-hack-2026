@@ -12,6 +12,8 @@ erDiagram
   COMPANY ||--|| COMPANY_FINANCIALS : "финансовый снимок"
   COMPANY ||--o{ LOAN_APPLICATION : "подаёт"
   COMPANY ||--o{ FEED_ITEM : "лента"
+  COMPANY ||--o{ FEED_DISMISSAL : "скрытые новости"
+  NEWS_CATALOG ||--o{ FEED_DISMISSAL : "скрыта клиентом"
   PRODUCT ||--o{ LOAN_APPLICATION : "выбран в"
   LOAN_APPLICATION ||--o{ APPLICATION_DOCUMENT : "документы"
   LOAN_APPLICATION ||--o{ EXTERNAL_CHECK_RESULT : "внешние проверки"
@@ -91,6 +93,7 @@ erDiagram
 | `status_history` / `audit_event` | история переходов и событий | from_status, to_status, actor_type, actor_id, comment |
 | `feed_item` | элементы ленты клиента | type, title, body, reason, related_application_id, is_read |
 | `news_catalog` | каталог новостей и подсказок с таргетингом | type, title, body, target_legal_form, target_industry_risk, target_product_code, target_status, weight, published_at (дата публикации) (пустое поле таргетинга значит «подходит всем») |
+| `kb_chunk` | база знаний помощника: фрагменты Markdown-файлов и карточки продуктов | id, source, title, body, keywords, tag, version, tsv (полнотекстовый индекс с русской морфологией) |
 
 ## Принципы
 

@@ -41,4 +41,5 @@
 | [`CLIENT_FINDINGS.md`](CLIENT_FINDINGS.md) | выводы по клиентам: темы, частота, цитаты |
 | [`UNDERWRITER_FINDINGS.md`](UNDERWRITER_FINDINGS.md) | выводы по андеррайтерам |
 | [`RESEARCH_TO_PRODUCT.md`](RESEARCH_TO_PRODUCT.md) | связь выводов с функциями прототипа, метрики, что не вошло и почему |
+| [`PRIORITIZATION.md`](PRIORITIZATION.md) | карта пользовательских историй, MoSCoW, RICE и ICE: что вошло в MVP и в каком порядке делать доработки |
 | [`sources/`](sources/) | исходные ответы респондентов |

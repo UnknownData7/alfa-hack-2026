@@ -2071,6 +2071,308 @@
           ]
         }
       ]
+    },
+    {
+      "name": "6. Помощник клиента (kim)",
+      "item": [
+        {
+          "name": "Настройки помощника",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "config"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, помощник включён', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().enabled).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Свободный текст: цель, сумма и варианты срока",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"page\": {\n    \"page\": \"NEED\"\n  },\n  \"text\": \"нужно 400 тысяч, чтобы закрыть аренду, пока не пришла оплата от заказчика\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('цель понята как кассовый разрыв', () => pm.expect(r.slots.purpose).to.eql('CASH_GAP'));",
+                  "pm.test('три варианта срока с платежом и переплатой', () => { pm.expect(r.terms.length).to.eql(3); r.terms.forEach(t => { pm.expect(t.monthlyPayment).to.be.above(0); pm.expect(t.overpayment).to.be.above(0); }); });",
+                  "const fill = r.buttons.find(b => b.action === 'FILL_FORM' && b.params.term === '6');",
+                  "pm.test('есть кнопка «Подставить» на 6 месяцев', () => pm.expect(fill).to.be.an('object'));",
+                  "pm.collectionVariables.set('asState', r.state);",
+                  "pm.collectionVariables.set('asSlots', JSON.stringify(r.slots));",
+                  "pm.collectionVariables.set('asParams', JSON.stringify(fill ? fill.params : {}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Кнопка «Подставить в форму»",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/actions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "actions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"state\": \"{{asState}}\",\n  \"slots\": {{asSlots}},\n  \"page\": { \"page\": \"NEED\" },\n  \"action\": \"FILL_FORM\",\n  \"params\": {{asParams}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('помощник заполняет форму подбора, заявку не создаёт', () => pm.expect(pm.response.json().ui[0].type).to.eql('FILL_NEED_FORM'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Вопрос из базы знаний",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Зачем нужно согласие на запрос в бюро?\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ответ из базы знаний', () => pm.expect(pm.response.json().sources[0]).to.eql('faq.bureau-consent'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Вопрос не по теме: вежливый отказ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Какой сейчас курс доллара?\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('отказ по политике', () => pm.expect(pm.response.json().sources[0]).to.eql('policy.off-topic'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Вопрос о скоринге: внутренняя оценка не раскрывается",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenKim}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Какой у меня скоринговый балл и почему отказали?\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "pm.test('ответ по политике о решении', () => pm.expect(r.sources[0]).to.eql('policy.decision'));",
+                  "pm.test('в ответе нет баллов и грейда', () => { const t = r.text.toLowerCase(); pm.expect(t).to.not.include('грейд'); pm.expect(t).to.not.match(/\\d+ балл/); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Андеррайтер не может пользоваться помощником: 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenUw1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assistant/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "messages"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"привет\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -2132,6 +2434,18 @@
     },
     {
       "key": "feedCardId",
+      "value": ""
+    },
+    {
+      "key": "asState",
+      "value": ""
+    },
+    {
+      "key": "asSlots",
+      "value": ""
+    },
+    {
+      "key": "asParams",
       "value": ""
     }
   ]
