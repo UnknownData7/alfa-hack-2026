@@ -17,7 +17,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Умный кредитный кабинет предпринимателя")
-                        .version("0.1.0")
+                        .version("1.0.0")
                         .description("API цифрового кредитного конвейера: клиентский путь и обработка заявки банком. "
                                 + "Все данные синтетические, внешние системы смоделированы."))
                 .components(new Components().addSecuritySchemes("bearer",

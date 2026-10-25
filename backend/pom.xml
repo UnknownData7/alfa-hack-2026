@@ -13,7 +13,7 @@
 
     <groupId>ru.hackathon</groupId>
     <artifactId>credit-backend</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0</version>
     <name>credit-backend</name>
     <description>Цифровой кредитный конвейер для малого и микробизнеса</description>
 
