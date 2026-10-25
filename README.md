@@ -14,6 +14,7 @@
 - [Архитектура](#архитектура)
 - [Требования к окружению](#требования-к-окружению)
 - [Запуск](#запуск)
+- [Развёртывание на сервере](docs/DEPLOY.md)
 - [Демо-учётки](#демо-учётки)
 - [Сценарий проверки](#сценарий-проверки)
 - [Переменные окружения](#переменные-окружения)
@@ -81,6 +82,16 @@ docker compose up --build
 ```bash
 curl -X POST http://localhost:3000/api/dev/reset-demo
 ```
+
+## Развёртывание на сервере
+
+Для демонстрации стенд ставится на чистый сервер с Ubuntu одной командой, с HTTPS и адресом вида `https://<IP>.sslip.io`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/UnknownData7/alfa-hack-2026/main/deploy/install.sh | bash
+```
+
+Требования к серверу, свой домен и сопровождение: [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Демо-учётки
 
@@ -179,6 +190,7 @@ npx newman run postman/collection.json -e postman/environment.json --working-dir
 | Документ | Содержание |
 |---|---|
 | [`docs/API.md`](docs/API.md) | группы эндпоинтов, ошибки, примеры |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md) | развёртывание на сервере с HTTPS |
 | [`docs/openapi.yaml`](docs/openapi.yaml) | спецификация OpenAPI 3 |
 | [`postman/`](postman/) | коллекция запросов с проверками и окружение |
 | [`docs/STATE_MACHINE.md`](docs/STATE_MACHINE.md) | статусы и допустимые переходы |
@@ -234,6 +246,7 @@ frontend/               React 18, TypeScript, Vite, nginx
 docs/                   документация и OpenAPI
   research/             исследование пользователей и исходные ответы
 postman/                коллекция запросов
+deploy/                 серверный вариант: Caddy с HTTPS, установка одной командой
 scripts/                запуск и смоук-проверка стенда на Windows (вызывается из start-demo.bat)
 ```
 

@@ -85,6 +85,18 @@ jobs:
           # Метрики доступны только на служебном порту внутри сети стенда
           docker compose exec -T backend wget -qO- http://localhost:8090/actuator/prometheus | grep -q '^credit_applications_submitted_total'
           ! curl -fs http://localhost:3000/actuator/prometheus
+      - name: Серверный вариант с HTTPS (Caddy)
+        run: |
+          echo "SITE_DOMAIN=localhost" >> .env
+          docker compose -f docker-compose.yml -f deploy/docker-compose.server.yml up -d caddy
+          for i in $(seq 1 30); do
+            curl -fsk https://localhost/actuator/health | grep -q UP && break
+            sleep 2
+          done
+          curl -fsk https://localhost/actuator/health | grep -q UP
+          curl -fsk https://localhost/ | grep -qi '<div id="root">'
+          # Сброс демо-данных снаружи закрыт
+          test "$(curl -sk -o /dev/null -w '%{http_code}' -X POST https://localhost/api/dev/reset-demo)" = 404
       - name: Логи при ошибке
         if: failure()
         run: docker compose logs --no-color --tail 300
